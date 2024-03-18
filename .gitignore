@@ -1,0 +1,8 @@
+build/
+sdkconfig
+sdkconfig.old
+.devcontainer
+.DS_Store
+.vscode/
+main/certs/
+main/Kconfig.projbuild
