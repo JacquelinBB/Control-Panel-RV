@@ -12,7 +12,6 @@
 #include "wifi.h"
 
 static EventGroupHandle_t s_wifi_event_group;
-static const char *TAG = "Wifi";
 static int s_retry_num = 0;
 
 static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -28,18 +27,18 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         {
             esp_wifi_connect();
             s_retry_num++;
-            ESP_LOGI(TAG, "retry to connect to the AP");
+            ESP_LOGI(TAG_W, "retry to connect to the AP");
         }
         else
         {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
         }
-        ESP_LOGI(TAG, "connect to the AP fail");
+        ESP_LOGI(TAG_W, "connect to the AP fail");
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-        ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        ESP_LOGI(TAG_W, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
@@ -77,20 +76,20 @@ void wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "wifi_init_sta finished.");
+    ESP_LOGI(TAG_W, "wifi_init_sta finished.");
 
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     if (bits & WIFI_CONNECTED_BIT)
     {
-        ESP_LOGI(TAG, "connected to ap SSID:%s password:%s", WIFI_SSID, WIFI_PASS);
+        ESP_LOGI(TAG_W, "connected to ap SSID:%s password:%s", WIFI_SSID, WIFI_PASS);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
-        ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s", WIFI_SSID, WIFI_PASS);
+        ESP_LOGI(TAG_W, "Failed to connect to SSID:%s, password:%s", WIFI_SSID, WIFI_PASS);
     }
     else
     {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
+        ESP_LOGE(TAG_W, "UNEXPECTED EVENT");
     }
 }
