@@ -4,8 +4,8 @@
 #include "driver/gpio.h"
 
 // Definições dos pinos GPIO para cada LED e botão
-#define AZUL_PIN GPIO_NUM_17
-#define BOTAO_PIN GPIO_NUM_22
+#define AZUL_PIN GPIO_NUM_12
+#define BOTAO_PIN GPIO_NUM_14
 
 // Função para configurar os pinos GPIO
 void configuraPinos()
@@ -28,7 +28,7 @@ void configuraPinos()
     gpio_config(&config);
 }
 
-void app_main()
+void led_button_task(void *params)
 {
     // Configura os pinos GPIO
     configuraPinos();

@@ -12,6 +12,8 @@
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
 
+extern SemaphoreHandle_t wifi_on_semaphore;
+
 void wifi_init_sta(void);
 
 #endif

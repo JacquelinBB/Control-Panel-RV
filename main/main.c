@@ -7,10 +7,12 @@
 
 #include "wifi.h"
 #include "mqtt_cloud.h"
+#include "sensor_hcsr04.h"
+
+//SemaphoreHandle_t wifi_on_semaphore;
+//SemaphoreHandle_t mqtt_on_semaphore;
 
 /*
-SemaphoreHandle_t wifi_on_semaphore;
-
 void wifi_on(void *params)
 {
     while (true)
@@ -26,7 +28,44 @@ void wifi_on(void *params)
         }
     }
 }
+
+void mqtt_on(void *params)
+{
+    char mensagem[50];
+    if (xSemaphoreTake(mqtt_on_semaphore, portMAX_DELAY) == pdTRUE)
+    {
+        while (true)
+        {
+            sprintf(mensagem, "Hello World");
+            mqtt_publish_menssage("esp32/test", mensagem);
+            xSemaphoreGive(mqtt_on_semaphore); // Libera o semáforo após o uso
+            vTaskDelay(10000 / portTICK_PERIOD_MS);
+        }
+    }
+    else
+    {
+        ESP_LOGE(TAG_M, "Failed to take semaphore");
+    }
+}
 */
+
+void test_task(void *params) {
+    char mensagem[50];
+    if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(5000)) == pdTRUE) {
+        sprintf(mensagem, "Hello World");
+        mqtt_publish_menssage("esp32/test", mensagem);
+        ESP_LOGI(TAG_M, "Message published");
+    } else {
+        ESP_LOGE(TAG_M, "MQTT connection unavailable. Waiting for reconnection...");
+        // Espera até que a conexão MQTT seja restabelecida ou que ocorra um timeout
+        if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(10000)) == pdTRUE) {
+            ESP_LOGI(TAG_M, "MQTT connection reestablished. Resuming publication.");
+        } else {
+            ESP_LOGE(TAG_M, "Timeout waiting for MQTT connection. Retrying...");
+        }
+    }
+    vTaskDelay(pdMS_TO_TICKS(10000)); // Publica a cada 10 segundos
+}
 
 void app_main()
 {
@@ -47,16 +86,23 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
-    ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
     /*
     wifi_on_semaphore = xSemaphoreCreateBinary();
-    if (wifi_on_semaphore == NULL)
-    {
-        ESP_LOGE(TAG_M, "Failed to create semaphore");
+    mqtt_on_semaphore = xSemaphoreCreateBinary();
+    if (wifi_on_semaphore == NULL || mqtt_on_semaphore == NULL) {
+        ESP_LOGE("Wifi & MQTT", "Failed to create semaphores");
         return;
     }
-    */
+
+    ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
     mqtt_start();
-    // xTaskCreate(&wifi_on, "Conecting to MQTT", 4096, NULL, 1, NULL);
+
+    xTaskCreate(&test_task, "Test Task", 4096, NULL, 1, NULL);
+    */
+    //xTaskCreate(&wifi_on, "Conecting to MQTT", 4096, NULL, 1, NULL); NOT
+    //xTaskCreate(&mqtt_on, "Conected to MQTT", 4096, NULL, 1, NULL); NOT
+
+    ESP_LOGI(TAG, "Initializing HC-SR04 sensor");
+    xTaskCreate(ultrasonic_sensor_task, "Ultrasonic Sensor Task", 4096, NULL, 1, NULL);
 }

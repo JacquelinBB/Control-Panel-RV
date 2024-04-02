@@ -18,6 +18,8 @@
 
 #include "mqtt_cloud.h"
 
+esp_mqtt_client_handle_t client;
+
 extern const uint8_t aws_root_ca_pem_start[] asm("_binary_aws_root_ca_pem_start");
 extern const uint8_t certificate_pem_crt_start[] asm("_binary_certificate_pem_crt_start");
 extern const uint8_t private_pem_key_start[] asm("_binary_private_pem_key_start");
@@ -40,26 +42,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
-        ESP_LOGI(TAG_M, "sent publish successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
-        ESP_LOGI(TAG_M, "sent subscribe successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
-        ESP_LOGI(TAG_M, "sent subscribe successful, msg_id=%d", msg_id);
-
-        msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
-        ESP_LOGI(TAG_M, "sent unsubscribe successful, msg_id=%d", msg_id);
+        xSemaphoreGive(mqtt_on_semaphore);
+        msg_id = esp_mqtt_client_subscribe(client, "esp32/confirm", 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_DISCONNECTED");
+        xSemaphoreTake(mqtt_on_semaphore, portMAX_DELAY); // Reseta o semáforo
         break;
-
     case MQTT_EVENT_SUBSCRIBED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
-        ESP_LOGI(TAG_M, "sent publish successful, msg_id=%d", msg_id);
         break;
     case MQTT_EVENT_UNSUBSCRIBED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
@@ -100,7 +91,12 @@ void mqtt_start()
             },
         }};
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config);
+    client = esp_mqtt_client_init(&mqtt_config);
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
+}
+
+void mqtt_publish_menssage(char* topic, char *message){
+    int message_id = esp_mqtt_client_publish(client, topic, message, 0, 1, 0);
+    ESP_LOGI(TAG_M, "Mensagem enviada, ID: %d", message_id);
 }

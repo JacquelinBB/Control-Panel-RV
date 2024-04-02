@@ -19,6 +19,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
         esp_wifi_connect();
+        xSemaphoreGive(wifi_on_semaphore);
     }
     // Trata as exeções
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -27,13 +28,13 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
         {
             esp_wifi_connect();
             s_retry_num++;
-            ESP_LOGI(TAG_W, "retry to connect to the AP");
+            ESP_LOGI(TAG_W, "Retry to connect to the AP");
         }
         else
         {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
         }
-        ESP_LOGI(TAG_W, "connect to the AP fail");
+        ESP_LOGI(TAG_W, "Connect to the AP fail");
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
@@ -82,7 +83,7 @@ void wifi_init_sta(void)
 
     if (bits & WIFI_CONNECTED_BIT)
     {
-        ESP_LOGI(TAG_W, "connected to ap SSID:%s password:%s", WIFI_SSID, WIFI_PASS);
+        ESP_LOGI(TAG_W, "Connected to ap SSID:%s password:%s", WIFI_SSID, WIFI_PASS);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
