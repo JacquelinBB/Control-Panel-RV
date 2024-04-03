@@ -10,8 +10,10 @@
 
 #define TAG_WA "WATER_LEVEL"
 
-void configuraPinos();
+extern float water_level;
+
+void init_config_water_tank();
 float calcular_nivel_agua(float distancia);
-void ultrasonic_task(void *params);
+void water_tank_task(void *params);
 
 #endif

@@ -7,7 +7,9 @@
 #include "esp_timer.h"
 #include "sensor_hcsr04.h"
 
-void configuraPinos()
+float water_level = 0.0;
+
+void init_config_water_tank()
 {
     gpio_config_t config;
     config.intr_type = GPIO_INTR_DISABLE;      // Desabilita interrupções geradas pelo pino
@@ -40,9 +42,9 @@ float calcular_nivel_agua(float distancia)
     return nivel_agua;
 }
 
-void ultrasonic_task(void *params)
+void water_tank_task(void *params)
 {
-    configuraPinos();
+    init_config_water_tank();
     uint64_t start, end;
 
     while (1)
@@ -67,8 +69,9 @@ void ultrasonic_task(void *params)
         float distance = duration * 0.0343 / 2;
 
         // Calcular a porcentagem de água
-        float water_level = calcular_nivel_agua(distance);
-        ESP_LOGI(TAG, "Water Level: %.2f%%", water_level);
+        water_level = calcular_nivel_agua(distance);
+        vTaskDelay(pdMS_TO_TICKS(10));
+        printf("Water level: %.2f%%\n", water_level);
 
         vTaskDelay(pdMS_TO_TICKS(1000)); // Aguardar 1 segundo
     }
