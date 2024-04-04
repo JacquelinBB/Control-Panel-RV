@@ -8,63 +8,39 @@
 #include "wifi.h"
 #include "mqtt_cloud.h"
 #include "sensor_hcsr04.h"
+#include "water_pump.h"
+#include "rgb_led.h"
 
-//SemaphoreHandle_t wifi_on_semaphore;
-//SemaphoreHandle_t mqtt_on_semaphore;
+SemaphoreHandle_t mqtt_on_semaphore;
 
-/*
-void wifi_on(void *params)
+void set_info() {    
+    char json_message[128];
+    snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
+    mqtt_publish_message("rv/info", json_message);
+    vTaskDelay(pdMS_TO_TICKS(15000));
+} // set_action
+
+void get_info() { 
+    ESP_LOGI(TAG_WA, "Water Level: %.2f", get_water_level);
+    ESP_LOGI(TAG_WP, "Pump Status: %s", get_pump_status);
+}
+
+void check_network(void *params)
 {
     while (true)
     {
-        if (xSemaphoreTake(wifi_on_semaphore, portMAX_DELAY) == pdTRUE)
+        if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(10000)) == pdTRUE)
         {
-            mqtt_start();
-            xSemaphoreGive(wifi_on_semaphore); // Libera o semáforo após o uso
+            ESP_LOGI(TAG_M, "Sucessfully take semaphore from MQTT");
+            xSemaphoreGive(mqtt_on_semaphore);
+            set_info();
+            get_info();
         }
         else
         {
-            ESP_LOGE(TAG_M, "Failed to take semaphore");
+            ESP_LOGE(TAG_W, "Failed to take semaphore from MQTT, because MQTT connection is unavailable");
         }
     }
-}
-
-void mqtt_on(void *params)
-{
-    char mensagem[50];
-    if (xSemaphoreTake(mqtt_on_semaphore, portMAX_DELAY) == pdTRUE)
-    {
-        while (true)
-        {
-            sprintf(mensagem, "Hello World");
-            mqtt_publish_menssage("esp32/test", mensagem);
-            xSemaphoreGive(mqtt_on_semaphore); // Libera o semáforo após o uso
-            vTaskDelay(10000 / portTICK_PERIOD_MS);
-        }
-    }
-    else
-    {
-        ESP_LOGE(TAG_M, "Failed to take semaphore");
-    }
-}
-*/
-
-void test_task(void *params) {
-    char mensagem[50];
-    if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(5000)) == pdTRUE) {
-        sprintf(mensagem, "Hello World");
-        mqtt_publish_menssage("esp32/test", mensagem);
-        ESP_LOGI(TAG_M, "Message published");
-    } else {
-        ESP_LOGE(TAG_M, "MQTT connection unavailable. Waiting for reconnection...");
-        // Espera até que a conexão MQTT seja restabelecida ou que ocorra um timeout
-        if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(10000)) == pdTRUE) {
-            ESP_LOGI(TAG_M, "MQTT connection reestablished. Resuming publication.");
-        } else {
-            ESP_LOGE(TAG_M, "Timeout waiting for MQTT connection. Retrying...");
-        }
-    }
-    vTaskDelay(pdMS_TO_TICKS(10000)); // Publica a cada 10 segundos
 }
 
 void app_main()
@@ -86,23 +62,21 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
-    /*
-    wifi_on_semaphore = xSemaphoreCreateBinary();
     mqtt_on_semaphore = xSemaphoreCreateBinary();
-    if (wifi_on_semaphore == NULL || mqtt_on_semaphore == NULL) {
-        ESP_LOGE("Wifi & MQTT", "Failed to create semaphores");
+    if ( mqtt_on_semaphore == NULL) {
+        ESP_LOGE("MQTT", "Failed to create semaphores");
         return;
     }
 
     ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
     mqtt_start();
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
-    xTaskCreate(&test_task, "Test Task", 4096, NULL, 1, NULL);
-    */
-    //xTaskCreate(&wifi_on, "Conecting to MQTT", 4096, NULL, 1, NULL); NOT
-    //xTaskCreate(&mqtt_on, "Conected to MQTT", 4096, NULL, 1, NULL); NOT
+    ESP_LOGI(TAG_WA, "Initializing Water Tank");
+    xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
+    ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
 
-    ESP_LOGI(TAG, "Initializing HC-SR04 sensor");
-    xTaskCreate(ultrasonic_sensor_task, "Ultrasonic Sensor Task", 4096, NULL, 1, NULL);
+    xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }

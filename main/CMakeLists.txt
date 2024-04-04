@@ -1,4 +1,4 @@
-idf_component_register(SRCS "rgb_led.c" "sensor_hcsr04.c" "wifi.c" "main.c" "mqtt_cloud.c"
+idf_component_register(SRCS "water_pump.c" "rgb_led.c" "sensor_hcsr04.c" "wifi.c" "main.c" "mqtt_cloud.c" "water_pump.c"
                     INCLUDE_DIRS ".")
 
 target_add_binary_data(${COMPONENT_TARGET} "certs/aws_root_ca_pem" TEXT)

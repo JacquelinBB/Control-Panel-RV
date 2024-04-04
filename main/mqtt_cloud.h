@@ -6,8 +6,10 @@
 #define BROKER_URL CONFIG_AWS_BROKER_URL
 
 extern SemaphoreHandle_t mqtt_on_semaphore;
+extern float get_water_level;
+extern char get_pump_status[10];
 
 void mqtt_start();
-void mqtt_publish_menssage(char* topic, char *message);
+void mqtt_publish_message(char* topic, char *message);
 
 #endif
