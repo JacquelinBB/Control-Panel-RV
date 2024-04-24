@@ -10,17 +10,20 @@
 #include "sensor_hcsr04.h"
 #include "water_pump.h"
 #include "rgb_led.h"
+#include "sensor_bme280.h"
 
 SemaphoreHandle_t mqtt_on_semaphore;
 
-void set_info() {    
+void set_info()
+{
     char json_message[128];
     snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
     mqtt_publish_message("rv/info", json_message);
     vTaskDelay(pdMS_TO_TICKS(15000));
 } // set_action
 
-void get_info() { 
+void get_info()
+{
     ESP_LOGI(TAG_WA, "Water Level: %.2f", get_water_level);
     ESP_LOGI(TAG_WP, "Pump Status: %s", get_pump_status);
 }
@@ -63,7 +66,8 @@ void app_main()
     ESP_ERROR_CHECK(ret);
 
     mqtt_on_semaphore = xSemaphoreCreateBinary();
-    if ( mqtt_on_semaphore == NULL) {
+    if (mqtt_on_semaphore == NULL)
+    {
         ESP_LOGE("MQTT", "Failed to create semaphores");
         return;
     }
@@ -77,6 +81,10 @@ void app_main()
     xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
     ESP_LOGI(TAG_WP, "Initializing Water Pump");
     xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+    ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
+    i2c_master_init();
+    ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
+    xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
 
-    xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
+    // xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }
