@@ -11,6 +11,7 @@
 #include "water_pump.h"
 #include "rgb_led.h"
 #include "sensor_bme280.h"
+#include "sensor_mq2.h"
 
 SemaphoreHandle_t mqtt_on_semaphore;
 
@@ -72,13 +73,13 @@ void app_main()
         return;
     }
 
-    ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
-    // wifi_init_sta();
-    // mqtt_start();
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    // ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
+    //  wifi_init_sta();
+    //  mqtt_start();
+    //  vTaskDelay(pdMS_TO_TICKS(5000));
 
-    led_task_running = true;
-    xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
+    // led_task_running = true;
+    // xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 
     // ESP_LOGI(TAG_WA, "Initializing Water Tank");
     //  xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
@@ -88,6 +89,8 @@ void app_main()
     //  i2c_master_init();
     // ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
     //  xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
+    ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
+    xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 
     // xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }
