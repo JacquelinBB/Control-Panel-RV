@@ -48,9 +48,9 @@ void check_network(void *params)
 
 void app_main()
 {
-    ESP_LOGI(TAG_W, "[APP] Startup..");
-    ESP_LOGI(TAG_W, "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG_W, "[APP] IDF version: %s", esp_get_idf_version());
+    ESP_LOGI("Info", "[APP] Startup..");
+    ESP_LOGI("Info", "[APP] Free memory: %" PRIu32 " bytes", esp_get_free_heap_size());
+    ESP_LOGI("Info", "[APP] IDF version: %s", esp_get_idf_version());
     esp_log_level_set("*", ESP_LOG_INFO);
     esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
     esp_log_level_set("esp-tls", ESP_LOG_VERBOSE);
@@ -73,18 +73,21 @@ void app_main()
     }
 
     ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
-    wifi_init_sta();
-    mqtt_start();
+    // wifi_init_sta();
+    // mqtt_start();
     vTaskDelay(pdMS_TO_TICKS(5000));
 
-    ESP_LOGI(TAG_WA, "Initializing Water Tank");
-    xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
-    ESP_LOGI(TAG_WP, "Initializing Water Pump");
-    xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
-    ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
-    i2c_master_init();
-    ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
-    xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
+    led_task_running = true;
+    xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
+
+    // ESP_LOGI(TAG_WA, "Initializing Water Tank");
+    //  xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
+    // ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    //  xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+    // ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
+    //  i2c_master_init();
+    // ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
+    //  xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
 
     // xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }

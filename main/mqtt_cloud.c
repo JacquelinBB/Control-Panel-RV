@@ -19,6 +19,8 @@
 
 #include "mqtt_cloud.h"
 
+#include "rgb_led.h"
+
 esp_mqtt_client_handle_t client;
 float get_water_level = 0.0;
 char get_pump_status[10] = "off";
@@ -47,6 +49,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG_M, "MQTT_EVENT_CONNECTED");
         xSemaphoreGive(mqtt_on_semaphore);
         msg_id = esp_mqtt_client_subscribe(client, "rv/info", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "led/debug", 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_DISCONNECTED");
@@ -62,28 +65,63 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG_M, "MQTT_EVENT_DATA");
-            if (strncmp(event->topic, "rv/info", event->topic_len) == 0)
+        if (strncmp(event->topic, "rv/info", event->topic_len) == 0)
+        {
+            cJSON *root = cJSON_Parse(event->data);
+            if (root != NULL)
             {
-                cJSON *root = cJSON_Parse(event->data);
-                if (root != NULL)
+                cJSON *water_level_json = cJSON_GetObjectItem(root, "water_level");
+                if (cJSON_IsNumber(water_level_json))
                 {
-                    cJSON *water_level_json = cJSON_GetObjectItem(root, "water_level");
-                    if (cJSON_IsNumber(water_level_json))
-                    {
-                        get_water_level = water_level_json->valuedouble;
-                    }
-                    cJSON *pump_status_json = cJSON_GetObjectItem(root, "pump_status");
-                    if (cJSON_IsString(pump_status_json) && (pump_status_json->valuestring != NULL))
-                    {
-                        strncpy(get_pump_status, pump_status_json->valuestring, sizeof(get_pump_status));
-                    }
-                    cJSON_Delete(root);
+                    get_water_level = water_level_json->valuedouble;
                 }
+                cJSON *pump_status_json = cJSON_GetObjectItem(root, "pump_status");
+                if (cJSON_IsString(pump_status_json) && (pump_status_json->valuestring != NULL))
+                {
+                    strncpy(get_pump_status, pump_status_json->valuestring, sizeof(get_pump_status));
+                }
+                cJSON_Delete(root);
             }
-            else {
-                printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-                printf("DATA=%.*s\r\n", event->data_len, event->data);
+        }
+        else if (strncmp(event->topic, "led/debug", event->topic_len) == 0)
+        {
+            char *debug_data = malloc(event->data_len + 1);
+
+            if (debug_data != NULL)
+            {
+                strncpy(debug_data, event->data, event->data_len);
+                debug_data[event->data_len] = '\0';
+
+                if (strcmp(debug_data, "on_light") == 0)
+                {
+                    if (!led_task_running)
+                    {
+                        xTaskCreate(led_task, "Led on", 4096, NULL, 1, NULL);
+                        led_task_running = true;
+                    }
+                }
+                else if (strcmp(debug_data, "off_light") == 0)
+                {
+                    if (led_task_running)
+                    {
+                        led_task_running = false;
+                        vTaskDelay(10 / portTICK_PERIOD_MS);
+                        xTaskCreate(led_task_side, "Led off", 4096, NULL, 1, NULL);
+                        vTaskDelay(1000 / portTICK_PERIOD_MS);
+                    }
+                }
+                free(debug_data);
             }
+            else
+            {
+                printf("Erro ao alocar memória.\n");
+            }
+        }
+        else
+        {
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
+        }
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG_M, "MQTT_EVENT_ERROR");
@@ -118,7 +156,8 @@ void mqtt_start()
     esp_mqtt_client_start(client);
 }
 
-void mqtt_publish_message(char* topic, char *message){
+void mqtt_publish_message(char *topic, char *message)
+{
     int message_id = esp_mqtt_client_publish(client, topic, message, 0, 1, 0);
     ESP_LOGI(TAG_M, "Mensagem enviada, ID: %d", message_id);
 }
