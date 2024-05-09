@@ -12,16 +12,44 @@
 #include "rgb_led.h"
 #include "sensor_bme280.h"
 #include "sensor_mq2.h"
+#include "botao.h"
 
 SemaphoreHandle_t mqtt_on_semaphore;
 
-void set_info()
+void pub_info()
 {
     char json_message[128];
     snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
     mqtt_publish_message("rv/info", json_message);
     vTaskDelay(pdMS_TO_TICKS(15000));
 } // set_action
+
+void set_action(char key){
+    char json_message[32];
+    snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
+
+    if(key == "b"){
+        mqtt_publish_message("sala11/bomba", "0");
+    }
+    else if(key == "b"){
+        mqtt_publish_message("sala11/bomba", "1");
+    }
+    else if(key == "v"){
+        mqtt_publish_message("sala11/valvula", "0");
+    }
+    else if(key == "v"){
+        mqtt_publish_message("sala11/valvula", "1");
+    }
+    else if(key == "d"){
+        mqtt_publish_message("esp32/open_door", "111111111111111111111111111");
+    }
+    else if(key == "w"){
+        mqtt_publish_message("get_drink", "1");
+    }
+    else if(key == "f"){
+        mqtt_publish_message("get_food", json_message);
+    }
+}
 
 void get_info()
 {
@@ -73,24 +101,27 @@ void app_main()
         return;
     }
 
-    // ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
-    //  wifi_init_sta();
-    //  mqtt_start();
-    //  vTaskDelay(pdMS_TO_TICKS(5000));
+    ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
+    wifi_init_sta();
+    mqtt_start();
+    vTaskDelay(pdMS_TO_TICKS(100));
 
-    // led_task_running = true;
-    // xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
+    led_task_running = true;
+    xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 
-    // ESP_LOGI(TAG_WA, "Initializing Water Tank");
-    //  xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
-    // ESP_LOGI(TAG_WP, "Initializing Water Pump");
-    //  xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
-    // ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
-    //  i2c_master_init();
-    // ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
-    //  xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
+    ESP_LOGI(TAG_WA, "Initializing Water Tank");
+    xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
+    ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+    ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
+    i2c_master_init();
+    ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
+    xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
     ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
     xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 
-    // xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
+    xTaskCreate(&key_task, "Key Task", 4096, NULL, 1, NULL);
+    register_key_callback(set_action);
+
+    xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }

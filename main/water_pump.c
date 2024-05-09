@@ -45,7 +45,7 @@ void water_pump_task() {
                 } else {
                     gpio_set_level(RELAY_PIN, 1);
                 }
-                //printf("Water pump is %s\n", is_pump_on ? "off" : "on");
+                printf("Water pump is %s\n", is_pump_on ? "off" : "on");
                 is_pump_on = !is_pump_on;
                 vTaskDelay(500 / portTICK_PERIOD_MS);
             }

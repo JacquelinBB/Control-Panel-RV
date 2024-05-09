@@ -71,8 +71,8 @@ void water_tank_task(void *params)
         // Calcular a porcentagem de água
         water_level = calcular_nivel_agua(distance);
         vTaskDelay(pdMS_TO_TICKS(10));
-        //printf("Water level: %.2f%%\n", water_level);
+        printf("Water level: %.2f%%\n", water_level);
 
-        vTaskDelay(pdMS_TO_TICKS(1000)); // Aguardar 1 segundo
+        vTaskDelay(pdMS_TO_TICKS(5000)); // Aguardar 1 segundo
     }
 }

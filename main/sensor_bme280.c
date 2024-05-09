@@ -110,7 +110,7 @@ void bme280_task(void *params) // Tarefa para ler e publicar os dados do sensor 
 
     while (true)
     {
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
 
         // Leitura dos dados do sensor BME280
         com_rslt = bme280_read_uncomp_pressure_temperature_humidity(
