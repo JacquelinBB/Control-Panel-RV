@@ -16,13 +16,18 @@
 
 SemaphoreHandle_t mqtt_on_semaphore;
 
-void pub_info()
+void info_remote()
 {
     char json_message[128];
     snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
     mqtt_publish_message("rv/info", json_message);
     vTaskDelay(pdMS_TO_TICKS(15000));
-} // set_action
+}
+
+void action_remote(){
+    vTaskDelay(pdMS_TO_TICKS(15000));
+    // Escutando algum pub e ao receber faz algo localmente, fazer direto no MQTT
+}
 
 void set_action(char key){
     char json_message[32];
