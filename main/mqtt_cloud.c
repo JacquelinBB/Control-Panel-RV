@@ -65,20 +65,30 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG_M, "MQTT_EVENT_DATA");
-        if (strncmp(event->topic, "rv/info", event->topic_len) == 0)
+        if (strncmp(event->topic, "water/info", event->topic_len) == 0)
         {
             cJSON *root = cJSON_Parse(event->data);
             if (root != NULL)
             {
-                cJSON *water_level_json = cJSON_GetObjectItem(root, "water_level");
+                cJSON *time_json = cJSON_GetObjectItem(root, "time");
                 if (cJSON_IsNumber(water_level_json))
                 {
-                    get_water_level = water_level_json->valuedouble;
+                    get_time = time_json->valueint;
                 }
-                cJSON *pump_status_json = cJSON_GetObjectItem(root, "pump_status");
-                if (cJSON_IsString(pump_status_json) && (pump_status_json->valuestring != NULL))
+                cJSON *led_json = cJSON_GetObjectItem(root, "led");
+                if (cJSON_IsNumber(led_json))
                 {
-                    strncpy(get_pump_status, pump_status_json->valuestring, sizeof(get_pump_status));
+                    get_led = led_json->valueint;
+                }
+                cJSON *distancia_json = cJSON_GetObjectItem(root, "distancia");
+                if (cJSON_IsNumber(distancia_json))
+                {
+                    get_distance = distancia_json->valuedouble;
+                }
+                cJSON *agua_json = cJSON_GetObjectItem(root, "agua");
+                if (cJSON_IsNumber(agua_json))
+                {
+                    get_agua = agua_json->valueint;
                 }
                 cJSON_Delete(root);
             }

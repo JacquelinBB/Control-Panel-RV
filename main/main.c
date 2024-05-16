@@ -22,44 +22,59 @@ void info_remote()
     snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
     mqtt_publish_message("rv/info", json_message);
     vTaskDelay(pdMS_TO_TICKS(15000));
+    // sensor gas, pressao, temperatura, umidade, level da agua, bomba de agua
+    // pub info de tempo em tempo
 }
 
 void action_remote(){
     vTaskDelay(pdMS_TO_TICKS(15000));
+    // bomba de agua
     // Escutando algum pub e ao receber faz algo localmente, fazer direto no MQTT
 }
 
 void set_action(char key){
-    char json_message[32];
-    snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
+    char json_message[12];
+    int type = 0;
+    snprintf(json_message, sizeof(json_message), "{\"type\": %d}", type);
 
-    if(key == "b"){
+    if(key == "o"){
         mqtt_publish_message("sala11/bomba", "0");
     }
-    else if(key == "b"){
+    if(key == "b"){
         mqtt_publish_message("sala11/bomba", "1");
     }
-    else if(key == "v"){
+    if(key == 'p'){
         mqtt_publish_message("sala11/valvula", "0");
     }
-    else if(key == "v"){
+    if(key == 'v'){
         mqtt_publish_message("sala11/valvula", "1");
     }
-    else if(key == "d"){
+    if(key == 'd'){
         mqtt_publish_message("esp32/open_door", "111111111111111111111111111");
     }
-    else if(key == "w"){
+    if(key == 'w'){
         mqtt_publish_message("get_drink", "1");
     }
-    else if(key == "f"){
+    if(key == '1'){
+        type = 1;
+        mqtt_publish_message("get_food", json_message);
+    }
+    if(key == '2'){
+        type = 2;
+        mqtt_publish_message("get_food", json_message);
+    }
+    if(key == '3'){
+        type = 3;
         mqtt_publish_message("get_food", json_message);
     }
 }
 
 void get_info()
 {
-    ESP_LOGI(TAG_WA, "Water Level: %.2f", get_water_level);
-    ESP_LOGI(TAG_WP, "Pump Status: %s", get_pump_status);
+    ESP_LOGI("TAG_IW", "Time Status: %d", get_time);
+    ESP_LOGI("TAG_IW", "Time Status: %d", get_led);
+    ESP_LOGI("TAG_IW", "Time Status: %.2f", get_distance);
+    ESP_LOGI("TAG_IW", "Time Status: %d", get_agua);
 }
 
 void check_network(void *params)
@@ -70,7 +85,7 @@ void check_network(void *params)
         {
             ESP_LOGI(TAG_M, "Sucessfully take semaphore from MQTT");
             xSemaphoreGive(mqtt_on_semaphore);
-            set_info();
+            register_key_callback(set_action);
             get_info();
         }
         else
@@ -126,7 +141,6 @@ void app_main()
     xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 
     xTaskCreate(&key_task, "Key Task", 4096, NULL, 1, NULL);
-    register_key_callback(set_action);
 
     xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }
