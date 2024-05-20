@@ -5,9 +5,7 @@
 #include "esp_log.h"
 #include "water_pump.h"
 
-bool is_pump_on = false;
-bool is_button_press = false;
-bool pump_task_running = false;
+bool is_pump_on = false, is_button_press = false;
 
 void init_config_water_pump() {
     gpio_config_t config; // Estrutura de configuração do pino GPIO
@@ -34,15 +32,7 @@ void water_pump_task() {
     init_config_water_pump();
 
     while (true)
-    {
-        /*
-        if (!pump_task_running)
-        {
-            break;
-            vTaskDelete(NULL);
-        }
-        */
-        
+    {   
         if (gpio_get_level(BOTAO_PIN) == 0) // Verifica se o botão foi pressionado (nível alto devido à configuração do pull-up)
         {
             is_button_press = true;

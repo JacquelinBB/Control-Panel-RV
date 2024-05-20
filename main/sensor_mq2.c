@@ -61,6 +61,6 @@ void read_mq2_sensor_task(void *pvParameter)
         mq2_value = calculate_PPM(Rs);
 
         printf("ADC Value: %lu, Voltage: %.2fV, PPM: %.2f\n", (unsigned long)adc_value, voltage, mq2_value);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(10000));
     }
 }

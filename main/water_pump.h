@@ -8,7 +8,6 @@
 
 extern bool is_pump_on;
 extern bool is_button_press;
-extern bool pump_task_running;
 
 void init_config_water_pump();
 void water_pump_task();

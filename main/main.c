@@ -11,7 +11,6 @@
 #include "rgb_led.h"
 #include "sensor_bme280.h"
 #include "sensor_mq2.h"
-#include "botao.h"
 
 SemaphoreHandle_t mqtt_on_semaphore;
 
@@ -23,12 +22,7 @@ void info_remote()
     vTaskDelay(pdMS_TO_TICKS(15000));
     // sensor gas, pressao, temperatura, umidade, level da agua, bomba de agua
     // pub info de tempo em tempo
-}
-
-void action_remote(){
-    vTaskDelay(pdMS_TO_TICKS(15000));
-    // bomba de agua
-    // Escutando algum pub e ao receber faz algo localmente, fazer direto no MQTT
+    // funções diferentes
 }
 
 void set_action(){
@@ -104,8 +98,8 @@ void check_network(void *params)
         if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(10000)) == pdTRUE)
         {
             xSemaphoreGive(mqtt_on_semaphore);
-            //set_action();
-            get_info();
+            // set_action();
+            // get_info();
         }
         else
         {
@@ -145,17 +139,16 @@ void app_main()
     mqtt_start();
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    //xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
+    xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 
-    //ESP_LOGI(TAG_WA, "Initializing Water Tank");
-    //xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
-    //pump_task_running = true;
-    //ESP_LOGI(TAG_WP, "Initializing Water Pump");
-    //xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
-    //ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
-    //i2c_master_init();
-    //ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
-    //xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
+    ESP_LOGI(TAG_WA, "Initializing Water Tank");
+    xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
+    ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+    ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
+    i2c_master_init();
+    ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
+    xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
     //ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
     //xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 

@@ -17,6 +17,7 @@
 #include "esp_tls.h"
 #include "cJSON.h"
 #include "mqtt_cloud.h"
+#include "water_pump.h"
 
 esp_mqtt_client_handle_t client;
 
@@ -204,7 +205,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             }
             topico_drink = true;
         }
-        /*
         else if (strncmp(event->topic, "rv/pump", event->topic_len) == 0)
         {
             char *debug_data = malloc(event->data_len + 1);
@@ -214,23 +214,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 strncpy(debug_data, event->data, event->data_len);
                 debug_data[event->data_len] = '\0';
 
-                if (strcmp(debug_data, "on_pump") == 0)
+                if (strcmp(debug_data, "pump") == 0)
                 {
-                    if (!pump_task_running)
-                    {
-                        xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
-                        pump_task_running = true;
-                    }
-                }
-                else if (strcmp(debug_data, "off_pump") == 0)
-                {
-                    if (pump_task_running)
-                    {
-                        led_task_running = false;
-                        vTaskDelay(10 / portTICK_PERIOD_MS);
-                        xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
-                        vTaskDelay(1000 / portTICK_PERIOD_MS);
-                    }
+                    is_button_press = true;
                 }
                 free(debug_data);
             }
@@ -239,7 +225,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 printf("Erro ao alocar memória.\n");
             }
         }
-        */
         else
         {
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
