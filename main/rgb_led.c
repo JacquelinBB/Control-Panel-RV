@@ -6,7 +6,6 @@
 #include "rgb_led.h"
 
 ledc_channel_config_t ledc_channel[3];
-bool led_task_running = false;
 
 void configura_pinos_led()
 {
@@ -70,27 +69,7 @@ void led_task(void *params)
 
     while (1)
     {
-        if (!led_task_running)
-        {
-            break;
-            vTaskDelete(NULL);
-        }
         set_rgb_color(255, 0, 255);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-}
-
-void led_task_side(void *params)
-{
-    configura_pinos_led();
-
-    while (1)
-    {
-        if (!led_task_running)
-        {
-            break;
-        }
-        set_rgb_color(0, 0, 0);
-    }
-    vTaskDelete(NULL);
 }

@@ -4,7 +4,6 @@
 #include <string.h>
 #include "esp_event.h"
 #include "freertos/semphr.h"
-
 #include "wifi.h"
 #include "mqtt_cloud.h"
 #include "sensor_hcsr04.h"
@@ -32,49 +31,70 @@ void action_remote(){
     // Escutando algum pub e ao receber faz algo localmente, fazer direto no MQTT
 }
 
-void set_action(char key){
+void set_action(){
     char json_message[12];
     int type = 0;
     snprintf(json_message, sizeof(json_message), "{\"type\": %d}", type);
 
-    if(key == "o"){
-        mqtt_publish_message("sala11/bomba", "0");
-    }
-    if(key == "b"){
-        mqtt_publish_message("sala11/bomba", "1");
-    }
-    if(key == 'p'){
-        mqtt_publish_message("sala11/valvula", "0");
-    }
-    if(key == 'v'){
-        mqtt_publish_message("sala11/valvula", "1");
-    }
-    if(key == 'd'){
-        mqtt_publish_message("esp32/open_door", "111111111111111111111111111");
-    }
-    if(key == 'w'){
-        mqtt_publish_message("get_drink", "1");
-    }
-    if(key == '1'){
-        type = 1;
-        mqtt_publish_message("get_food", json_message);
-    }
-    if(key == '2'){
-        type = 2;
-        mqtt_publish_message("get_food", json_message);
-    }
-    if(key == '3'){
-        type = 3;
-        mqtt_publish_message("get_food", json_message);
-    }
+    mqtt_publish_message("sala11/bomba", "0");
+    mqtt_publish_message("sala11/bomba", "1");
+    mqtt_publish_message("sala11/valvula", "0");
+    mqtt_publish_message("sala11/valvula", "1");
+    mqtt_publish_message("esp32/open_door", "111111111111111111111111111");
+    mqtt_publish_message("get_drink", "1");
+    type = 1;
+    mqtt_publish_message("get_food", json_message);
+    type = 2;
+    mqtt_publish_message("get_food", json_message);
+    type = 3;
+    mqtt_publish_message("get_food", json_message);
+
+    vTaskDelay(pdMS_TO_TICKS(10000));
 }
 
 void get_info()
 {
-    ESP_LOGI("TAG_IW", "Time Status: %d", get_time);
-    ESP_LOGI("TAG_IW", "Time Status: %d", get_led);
-    ESP_LOGI("TAG_IW", "Time Status: %.2f", get_distance);
-    ESP_LOGI("TAG_IW", "Time Status: %d", get_agua);
+    if(topico_water == true)
+    {
+        topico_water = false;
+        ESP_LOGI("TAG_IW", "Status do time: %d", get_time);
+        ESP_LOGI("TAG_IW", "Status do led: %d", get_led);
+        ESP_LOGI("TAG_IW", "Status da Distância: %.2f cm", get_distance);
+        ESP_LOGI("TAG_IW", "Status do Nível de água: %d", get_agua);
+        ESP_LOGI("TAG_IW", "Status do Volume da cisterna: %.2f", get_cisterna);
+        ESP_LOGI("TAG_IW", "Status do Volume da caixa: %.2f", get_caixa);
+    }
+    else if(topico_fluxo == true)
+    {
+        topico_fluxo = false;
+        ESP_LOGI("TAG_IF", "Status do Tempo do Fluxo: %d", get_fluxo_time);
+        ESP_LOGI("TAG_IF", "Status do Fluxo de água: %d", get_fluxo);
+    }
+    else if(topico_food == true)
+    { // x y z
+        topico_food = false;
+        ESP_LOGI("TAG_F", "Status da quantidade de comida no tipo 1: %s", get_food1);
+        ESP_LOGI("TAG_F", "Status da quantidade de comida no tipo 2: %s", get_food2);
+        ESP_LOGI("TAG_F", "Status da quantidade de comida no tipo 3: %s", get_food3);
+    }
+    else if(topico_drink == true)
+    {
+        topico_drink = false;
+        ESP_LOGI("TAG_D", "Status da quantidade de líquido disponivel: %s", get_drink);
+    }
+    else if(topico_door == true)
+    {
+        topico_door = false;
+        ESP_LOGI("TAG_P", "Status da porta: %d", get_porta);
+        ESP_LOGI("TAG_P", "Último acesso registrado: %d", get_acesso_time); // Milisegundos
+    }
+    else if(topico_open_door == true)
+    {
+        topico_open_door = false;
+        ESP_LOGI("TAG_OD", "Último acesso por: %s", get_name); // is_valid: 0 ou 1 | rfid | name: string)
+    }
+    // "esp32/pub_dgp" - Código do rfid para controle de acesso (string) = "sensor_a0:" "79 88 0A 00"
+    // "esp32/pinPad" - "sensor_a0: (int) - Senha que foi digitada no teclado
 }
 
 void check_network(void *params)
@@ -83,9 +103,8 @@ void check_network(void *params)
     {
         if (xSemaphoreTake(mqtt_on_semaphore, pdMS_TO_TICKS(10000)) == pdTRUE)
         {
-            ESP_LOGI(TAG_M, "Sucessfully take semaphore from MQTT");
             xSemaphoreGive(mqtt_on_semaphore);
-            register_key_callback(set_action);
+            //set_action();
             get_info();
         }
         else
@@ -126,21 +145,19 @@ void app_main()
     mqtt_start();
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    led_task_running = true;
-    xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
+    //xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 
-    ESP_LOGI(TAG_WA, "Initializing Water Tank");
-    xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
-    ESP_LOGI(TAG_WP, "Initializing Water Pump");
-    xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
-    ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
-    i2c_master_init();
-    ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
-    xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
-    ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
-    xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
-
-    xTaskCreate(&key_task, "Key Task", 4096, NULL, 1, NULL);
+    //ESP_LOGI(TAG_WA, "Initializing Water Tank");
+    //xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
+    //pump_task_running = true;
+    //ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    //xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+    //ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
+    //i2c_master_init();
+    //ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
+    //xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
+    //ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
+    //xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 
     xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
 }

@@ -16,14 +16,14 @@
 #include "mqtt_client.h"
 #include "esp_tls.h"
 #include "cJSON.h"
-
 #include "mqtt_cloud.h"
 
-#include "rgb_led.h"
-
 esp_mqtt_client_handle_t client;
-float get_water_level = 0.0;
-char get_pump_status[10] = "off";
+
+int get_time = 0, get_led = 0, get_agua = 0, get_fluxo_time, get_fluxo, get_acesso_time, get_porta;
+float get_distance = 0.0, get_cisterna = 0.0, get_caixa = 0.0;
+char get_name[30], get_food1[5], get_food2[5], get_food3[5], get_drink[5];
+bool topico_water, topico_fluxo, topico_door, topico_open_door, topico_food, topico_drink;
 
 extern const uint8_t aws_root_ca_pem_start[] asm("_binary_aws_root_ca_pem_start");
 extern const uint8_t certificate_pem_crt_start[] asm("_binary_certificate_pem_crt_start");
@@ -48,8 +48,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_CONNECTED");
         xSemaphoreGive(mqtt_on_semaphore);
-        msg_id = esp_mqtt_client_subscribe(client, "rv/info", 0);
-        msg_id = esp_mqtt_client_subscribe(client, "led/debug", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "water/info", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "sala11/fluxo", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "esp32/door", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "esp32/open_door", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "set_food", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "set_drink", 0);
+        msg_id = esp_mqtt_client_subscribe(client, "rv/pump", 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_DISCONNECTED");
@@ -71,7 +76,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             if (root != NULL)
             {
                 cJSON *time_json = cJSON_GetObjectItem(root, "time");
-                if (cJSON_IsNumber(water_level_json))
+                if (cJSON_IsNumber(time_json))
                 {
                     get_time = time_json->valueint;
                 }
@@ -90,10 +95,117 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 {
                     get_agua = agua_json->valueint;
                 }
+                cJSON *cisterna_json = cJSON_GetObjectItem(root, "cisterna");
+                if (cJSON_IsNumber(cisterna_json))
+                {
+                    get_cisterna = cisterna_json->valuedouble;
+                }
+                cJSON *caixa_json = cJSON_GetObjectItem(root, "caixa");
+                if (cJSON_IsNumber(caixa_json))
+                {
+                    get_caixa = caixa_json->valuedouble;
+                }
                 cJSON_Delete(root);
             }
+            topico_water = true;
         }
-        else if (strncmp(event->topic, "led/debug", event->topic_len) == 0)
+        else if (strncmp(event->topic, "sala11/fluxo", event->topic_len) == 0)
+        {
+            cJSON *root = cJSON_Parse(event->data);
+            if (root != NULL)
+            {
+                cJSON *time_json = cJSON_GetObjectItem(root, "time");
+                if (cJSON_IsNumber(time_json))
+                {
+                    get_fluxo_time = time_json->valueint;
+                }
+                cJSON *fluxo_json = cJSON_GetObjectItem(root, "fluxo");
+                if (cJSON_IsNumber(fluxo_json))
+                {
+                    get_fluxo = fluxo_json->valueint;
+                }
+                cJSON_Delete(root);
+            }
+            topico_fluxo = true;
+        }
+        else if (strncmp(event->topic, "esp32/door", event->topic_len) == 0)
+        {
+            cJSON *root = cJSON_Parse(event->data);
+            if (root != NULL)
+            {
+                cJSON *time_json = cJSON_GetObjectItem(root, "time");
+                if (cJSON_IsNumber(time_json))
+                {
+                    get_acesso_time = time_json->valueint;
+                }
+                cJSON *porta_json = cJSON_GetObjectItem(root, "sensor_porta");
+                if (cJSON_IsNumber(porta_json))
+                {
+                    get_porta = porta_json->valueint;
+                }
+                cJSON_Delete(root);
+            }
+            topico_door = true;
+        }
+        else if (strncmp(event->topic, "esp32/open_door", event->topic_len) == 0)
+        {
+            cJSON *root = cJSON_Parse(event->data);
+            if (root != NULL)
+            {
+                cJSON *name_json = cJSON_GetObjectItem(root, "name");
+                if (cJSON_IsString(name_json)  && (name_json->valuestring != NULL))
+                {
+                    strncpy(get_name, name_json->valuestring, sizeof(get_name) - 1);
+                    get_name[sizeof(get_name) - 1] = '\0'; 
+                }
+                cJSON_Delete(root);
+            }
+            topico_open_door = true;
+        }
+        else if (strncmp(event->topic, "set_food", event->topic_len) == 0)
+        {
+            cJSON *root = cJSON_Parse(event->data);
+            if (root != NULL)
+            {
+                cJSON *food1_json = cJSON_GetObjectItem(root, "X");
+                if (cJSON_IsString(food1_json)  && (food1_json->valuestring != NULL))
+                {
+                    strncpy(get_food1, food1_json->valuestring, sizeof(get_food1) - 1);
+                    get_food1[sizeof(get_food1) - 1] = '\0';
+                }
+                cJSON *food2_json = cJSON_GetObjectItem(root, "Y");
+                if (cJSON_IsString(food2_json)  && (food2_json->valuestring != NULL))
+                {
+                    strncpy(get_food2, food2_json->valuestring, sizeof(get_food2) - 1);
+                    get_food2[sizeof(get_food2) - 1] = '\0';
+                }
+                cJSON *food3_json = cJSON_GetObjectItem(root, "Z");
+                if (cJSON_IsString(food3_json)  && (food3_json->valuestring != NULL))
+                {
+                    strncpy(get_food3, food3_json->valuestring, sizeof(get_food3) - 1);
+                    get_food3[sizeof(get_food3) - 1] = '\0';
+                }
+                cJSON_Delete(root);
+            }
+            topico_food = true;
+        }
+        else if (strncmp(event->topic, "set_drink", event->topic_len) == 0)
+        {
+            cJSON *root = cJSON_Parse(event->data);
+            if (root != NULL)
+            {
+                cJSON *drink_json = cJSON_GetObjectItem(root, "drink");
+                if (cJSON_IsString(drink_json)  && (drink_json->valuestring != NULL))
+                {
+                    strncpy(get_drink, drink_json->valuestring, sizeof(get_drink) - 1);
+                    get_drink[sizeof(get_drink) - 1] = '\0';
+                }
+                cJSON_Delete(root);
+            }
+            topico_drink = true;
+        }
+        /*
+        else if (strncmp(event->topic, "rv/pump", event->topic_len) == 0)
         {
             char *debug_data = malloc(event->data_len + 1);
 
@@ -102,21 +214,21 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 strncpy(debug_data, event->data, event->data_len);
                 debug_data[event->data_len] = '\0';
 
-                if (strcmp(debug_data, "on_light") == 0)
+                if (strcmp(debug_data, "on_pump") == 0)
                 {
-                    if (!led_task_running)
+                    if (!pump_task_running)
                     {
-                        xTaskCreate(led_task, "Led on", 4096, NULL, 1, NULL);
-                        led_task_running = true;
+                        xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+                        pump_task_running = true;
                     }
                 }
-                else if (strcmp(debug_data, "off_light") == 0)
+                else if (strcmp(debug_data, "off_pump") == 0)
                 {
-                    if (led_task_running)
+                    if (pump_task_running)
                     {
                         led_task_running = false;
                         vTaskDelay(10 / portTICK_PERIOD_MS);
-                        xTaskCreate(led_task_side, "Led off", 4096, NULL, 1, NULL);
+                        xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
                         vTaskDelay(1000 / portTICK_PERIOD_MS);
                     }
                 }
@@ -127,6 +239,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 printf("Erro ao alocar memória.\n");
             }
         }
+        */
         else
         {
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
