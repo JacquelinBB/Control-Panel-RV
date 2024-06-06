@@ -3,7 +3,7 @@
 
 #define TAG_WP "WATER PUMP"
 
-#define BOTAO_PIN GPIO_NUM_14
+#define BOTAO_PIN GPIO_NUM_15 // Remover
 #define RELAY_PIN GPIO_NUM_25
 
 extern bool is_pump_on;

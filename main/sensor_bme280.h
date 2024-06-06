@@ -11,6 +11,8 @@
 #define I2C_MASTER_ACK 0
 #define I2C_MASTER_NACK 1
 
+extern double temp, press, hum;
+
 void i2c_master_init();
 s8 bme280_i2c_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
 s8 bme280_i2c_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);

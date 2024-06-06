@@ -11,6 +11,7 @@
 #include "rgb_led.h"
 #include "sensor_bme280.h"
 #include "sensor_mq2.h"
+#include "screen.h"
 
 SemaphoreHandle_t mqtt_on_semaphore;
 
@@ -100,6 +101,8 @@ void check_network(void *params)
             xSemaphoreGive(mqtt_on_semaphore);
             // set_action();
             // get_info();
+            //xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1);
+            //xTaskCreate(&guiTask, "Gui Interface", 4096, NULL, 1, NULL);
         }
         else
         {
@@ -139,12 +142,12 @@ void app_main()
     mqtt_start();
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
+    //xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 
     ESP_LOGI(TAG_WA, "Initializing Water Tank");
     xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 1, NULL);
-    ESP_LOGI(TAG_WP, "Initializing Water Pump");
-    xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
+    //ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    //xTaskCreate(water_pump_task, "Water Pump Task", 4096, NULL, 1, NULL);
     ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
     i2c_master_init();
     ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
@@ -153,4 +156,7 @@ void app_main()
     //xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 
     xTaskCreate(&check_network, "Check", 4096, NULL, 1, NULL);
+
+    xTaskCreate(&guiTask, "Gui Interface", 4096, NULL, 1, NULL);
+    //xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1);
 }

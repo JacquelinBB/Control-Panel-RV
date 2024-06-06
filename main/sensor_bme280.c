@@ -4,6 +4,8 @@
 #include "driver/i2c.h"
 #include "sensor_bme280.h"
 
+double temp, press, hum;
+
 void i2c_master_init()
 {
     i2c_config_t conf = {
@@ -117,14 +119,14 @@ void bme280_task(void *params) // Tarefa para ler e publicar os dados do sensor 
             &v_uncomp_pressure_s32, &v_uncomp_temperature_s32, &v_uncomp_humidity_s32);
 
         // Compensação e formatação dos dados do sensor
-        double temp = bme280_compensate_temperature_double(v_uncomp_temperature_s32);
-        double press = bme280_compensate_pressure_double(v_uncomp_pressure_s32) / 100; // Pa -> hPa
-        double hum = bme280_compensate_humidity_double(v_uncomp_humidity_s32);
+        temp = bme280_compensate_temperature_double(v_uncomp_temperature_s32);
+        press = bme280_compensate_pressure_double(v_uncomp_pressure_s32) / 100; // Pa -> hPa
+        hum = bme280_compensate_humidity_double(v_uncomp_humidity_s32);
 
         // Impressão dos dados do sensor
         if (com_rslt == SUCCESS)
         {
-            printf("Temperature: %.2f°C, Pressure: %.2f hPa, Humidity: %.2f%%\n", temp, press, hum);
+            //printf("Temperature: %.2f°C, Pressure: %.2f hPa, Humidity: %.2f%%\n", temp, press, hum);
         }
         else
         {
