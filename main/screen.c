@@ -12,6 +12,10 @@
 #include "esp_timer.h"
 #include "screen.h"
 #include "mqtt_cloud.h"
+#include "sensor_hcsr04.h"
+#include "sensor_bme280.h"
+#include "water_pump.h"
+#include "sensor_mq2.h"
 
 /* Littlevgl specific */
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE
@@ -22,13 +26,18 @@
 
 #include "lvgl_helpers.h"
 
-static int var1 = 10;
-static int var2 = 20;
-static int var3 = 30;
-static int var4 = 40;
+bool is_pump_on = false;
 
-static void btn_event_handler(lv_obj_t * btn, lv_event_t event);
 static void button_event_handler_home(lv_obj_t * btn, lv_event_t event);
+static void button_event_handler_door(lv_obj_t * btn, lv_event_t event);
+static void button_event_handler_pantry_1(lv_obj_t * btn, lv_event_t event);
+static void button_event_handler_pantry_2(lv_obj_t * btn, lv_event_t event);
+static void button_event_handler_attic_1(lv_obj_t * btn, lv_event_t event);
+static void button_event_handler_attic_2(lv_obj_t * btn, lv_event_t event);
+void update_info_text1(lv_task_t * task);
+void update_info_text2(lv_task_t * task);
+void update_info_text3(lv_task_t * task);
+void update_info_text4(lv_task_t * task);
 static void home_create(lv_obj_t * parent);
 static void door_create(lv_obj_t * parent);
 static void pantry_create(lv_obj_t * parent);
@@ -42,6 +51,11 @@ static lv_obj_t * t1;
 static lv_obj_t * t2;
 static lv_obj_t * t3;
 static lv_obj_t * t4;
+
+static lv_obj_t *label1;
+static lv_obj_t *label2;
+static lv_obj_t *label3;
+static lv_obj_t *label4;
 
 static lv_style_t style_box;
 
@@ -157,16 +171,10 @@ static void home_create(lv_obj_t * parent)
     lv_obj_add_style(h_ambiente, LV_CONT_PART_MAIN, &style_box);
     lv_obj_set_width(h_ambiente, grid_w);
 
-    char info_text1[256];
-    snprintf(info_text1, sizeof(info_text1), 
-             "Temperatura: %d °C\n"
-             "Umidade: %d %%\n"
-             "Pressao Barometrica: %d hPa\n"
-             "Presenca de Gas: %d ppm", 
-             var1, var2, var3, var4);
+    label1 = lv_label_create(h_ambiente, NULL);
+    lv_label_set_text(label1, "Esperando algum dado para ser exibido...");
 
-    lv_obj_t * label1 = lv_label_create(h_ambiente, NULL);
-    lv_label_set_text(label1, info_text1);
+    lv_task_create(update_info_text1, 2000, LV_TASK_PRIO_LOW, NULL);
     
     lv_obj_t * h_bomba = lv_cont_create(parent, NULL);
     lv_cont_set_layout(h_bomba, LV_LAYOUT_PRETTY_MID);
@@ -178,11 +186,22 @@ static void home_create(lv_obj_t * parent)
     lv_obj_t * btn = lv_btn_create(h_bomba, NULL);
     lv_btn_set_checkable(btn, true);
     lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_NONE);
-    lv_obj_set_size(btn, 125, 50);
+    lv_obj_set_size(btn, 115, 50);
     lv_obj_set_event_cb(btn, button_event_handler_home);
     
     lv_obj_t * label = lv_label_create(btn, NULL);
-    lv_label_set_text(label, "Ativar");
+    lv_label_set_text(label, "Desligado");
+
+    lv_obj_t * h_agua = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_agua, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Tanque de agua");
+    lv_cont_set_fit2(h_agua, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_agua, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_agua, grid_w);
+
+    label3 = lv_label_create(h_agua, NULL);
+    lv_label_set_text(label3, "Esperando algum dado para ser exibido...");
+
+    lv_task_create(update_info_text3, 2000, LV_TASK_PRIO_LOW, NULL);
 }
 
 static void door_create(lv_obj_t * parent)
@@ -191,87 +210,68 @@ static void door_create(lv_obj_t * parent)
     lv_disp_size_t disp_size = lv_disp_get_size_category(NULL);
     lv_coord_t grid_w = lv_page_get_width_grid(parent, disp_size <= LV_DISP_SIZE_SMALL ? 1 : 2, 1);
 
-    lv_obj_t * h_ambiente = lv_cont_create(parent, NULL);
-    lv_obj_set_style_local_value_str(h_ambiente, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Ambiente");
-    lv_cont_set_fit2(h_ambiente, LV_FIT_TIGHT, LV_FIT_TIGHT);
-    lv_obj_add_style(h_ambiente, LV_CONT_PART_MAIN, &style_box);
-    lv_obj_set_width(h_ambiente, grid_w);
+    lv_obj_t * h_porta_data = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_porta_data, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Porta de Entrada");
+    lv_cont_set_fit2(h_porta_data, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_porta_data, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_porta_data, grid_w);
 
-    if(topico_door == true)
-    {
-        topico_door = false;
-    }
-    if(topico_open_door == true)
-    {
-        topico_open_door = false;
-    }
+    label2 = lv_label_create(h_porta_data, NULL);
+    lv_label_set_text(label2, "Esperando algum dado para ser exibido...");
 
-    char info_text1[256];
-    snprintf(info_text1, sizeof(info_text1), 
-             "Status da porta: %d\n"
-             "Último acesso registrado: %d\n"
-             "Último acesso por: %s",
-             get_porta, get_acesso_time, get_name);
+    lv_task_create(update_info_text2, 2000, LV_TASK_PRIO_LOW, NULL);
 
-    lv_obj_t * label1 = lv_label_create(h_ambiente, NULL);
-    lv_label_set_text(label1, info_text1);
+    lv_obj_t * h_porta_action = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_porta_action, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Porta");
+    lv_cont_set_fit2(h_porta_action, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_porta_action, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_porta_action, grid_w);
+
+    lv_obj_t * btn = lv_btn_create(h_porta_action, NULL);
+    lv_btn_set_checkable(btn, true);
+    lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_NONE);
+    lv_obj_set_size(btn, 100, 50);
+    lv_obj_set_event_cb(btn, button_event_handler_door);
+    
+    lv_obj_t * label = lv_label_create(btn, NULL);
+    lv_label_set_text(label, "Abrir");
 }
 
 static void pantry_create(lv_obj_t * parent)
 {
-    lv_page_set_scrl_layout(parent, LV_LAYOUT_PRETTY_MID);
-
+    lv_page_set_scrl_layout(parent, LV_LAYOUT_PRETTY_TOP);
     lv_disp_size_t disp_size = lv_disp_get_size_category(NULL);
-    lv_coord_t grid_h = lv_page_get_height_grid(parent, 1, 1);
-    lv_coord_t grid_w;
-    if(disp_size <= LV_DISP_SIZE_SMALL) grid_w = lv_page_get_width_grid(parent, 1, 1);
-    else grid_w = lv_page_get_width_grid(parent, 2, 1);
+    lv_coord_t grid_w = lv_page_get_width_grid(parent, disp_size <= LV_DISP_SIZE_SMALL ? 1 : 2, 1);
 
-    // Create the first page with text
-    lv_obj_t * page1 = lv_page_create(parent, NULL);
-    lv_obj_set_size(page1, grid_w, grid_h);
-    lv_page_set_scroll_propagation(page1, true);
+    lv_obj_t * h_ambiente = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_ambiente, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Balinha");
+    lv_cont_set_fit2(h_ambiente, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_ambiente, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_ambiente, grid_w);
 
-    if(topico_food == true)
-    { // x y z
-        topico_food = false;
-    }
-    if(topico_drink == true)
-    {
-        topico_drink = false;
-    }
+    lv_obj_t * btn = lv_btn_create(h_ambiente, NULL);
+    lv_btn_set_checkable(btn, true);
+    lv_btn_set_fit2(btn, LV_FIT_NONE, LV_FIT_NONE);
+    lv_obj_set_size(btn, 150, 50);
+    lv_obj_set_event_cb(btn, button_event_handler_pantry_1);
+    
+    lv_obj_t * label = lv_label_create(btn, NULL);
+    lv_label_set_text(label, "Liberar");
 
-    // Creating the text with the values of the variables
-    char info_text[256];
-    snprintf(info_text, sizeof(info_text), 
-             "Status da quantidade de comida no tipo 1: %s\n"
-             "Status da quantidade de comida no tipo 2: %s\n"
-             "Status da quantidade de comida no tipo 3: %s\n"
-             "Status da quantidade de líquido disponivel: %s\n",
-             get_food1, get_food2, get_food3, get_drink);
+    lv_obj_t * h_drink = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_drink, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Fanta");
+    lv_cont_set_fit2(h_drink, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_drink, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_drink, grid_w);
 
-    lv_obj_t * label1 = lv_label_create(page1, NULL);
-    lv_label_set_text(label1, info_text);
-    //lv_obj_set_style_local_text_font(label1, LV_LABEL_PART_MAIN, LV_STATE_DEFAULT, &lv_font_montserrat_22); 
-
-    // Create a second page for buttons
-    lv_obj_t * page2 = lv_page_create(parent, NULL);
-    lv_obj_set_size(page2, grid_w, grid_h);
-    lv_page_set_scroll_propagation(page2, true);
-
-    // Names for the buttons
-    const char* btn_names[4] = {"Agua", "Macarrao", "Arroz", "Feijao"};
-
-    // Create buttons inside the second page
-    for (int i = 0; i < 4; i++) {
-        lv_obj_t * btn = lv_btn_create(page2, NULL);
-        lv_obj_set_size(btn, grid_w / 2, grid_h / 4); // Adjust the size of the buttons as needed
-
-        lv_obj_t * label = lv_label_create(btn, NULL);
-        lv_label_set_text(label, btn_names[i]);
-
-        lv_obj_set_event_cb(btn, btn_event_handler); // Set a generic event handler for buttons
-    }
+    lv_obj_t * btn2 = lv_btn_create(h_drink, NULL);
+    lv_btn_set_checkable(btn2, true);
+    lv_btn_set_fit2(btn2, LV_FIT_NONE, LV_FIT_NONE);
+    lv_obj_set_size(btn2, 150, 50);
+    lv_obj_set_event_cb(btn2, button_event_handler_pantry_2);
+    
+    lv_obj_t * label2 = lv_label_create(btn2, NULL);
+    lv_label_set_text(label2, "Liberar");
 }
 
 static void attic_create(lv_obj_t * parent){
@@ -280,55 +280,185 @@ static void attic_create(lv_obj_t * parent){
     lv_coord_t grid_w = lv_page_get_width_grid(parent, disp_size <= LV_DISP_SIZE_SMALL ? 1 : 2, 1);
 
     lv_obj_t * h_ambiente = lv_cont_create(parent, NULL);
-    lv_obj_set_style_local_value_str(h_ambiente, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Ambiente");
+    lv_obj_set_style_local_value_str(h_ambiente, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Analise da Agua");
     lv_cont_set_fit2(h_ambiente, LV_FIT_TIGHT, LV_FIT_TIGHT);
     lv_obj_add_style(h_ambiente, LV_CONT_PART_MAIN, &style_box);
     lv_obj_set_width(h_ambiente, grid_w);
 
-    if(topico_water == true)
-    {
-        topico_water = false;
-    }
-    if(topico_fluxo == true)
-    {
-        topico_fluxo = false;
-    }
+    label4 = lv_label_create(h_ambiente, NULL);
+    lv_label_set_text(label4, "Esperando algum dado para ser exibido...");
 
+    lv_task_create(update_info_text4, 2000, LV_TASK_PRIO_LOW, NULL);
+
+    lv_obj_t * h_bomba = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_bomba, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Bomba");
+    lv_cont_set_fit2(h_bomba, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_bomba, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_bomba, grid_w);
+
+    lv_obj_t * btn1 = lv_btn_create(h_bomba, NULL);
+    lv_btn_set_checkable(btn1, true);
+    lv_btn_set_fit2(btn1, LV_FIT_NONE, LV_FIT_NONE);
+    lv_obj_set_size(btn1, 165, 50);
+    lv_obj_set_event_cb(btn1, button_event_handler_attic_1);
+    
+    lv_obj_t * label1 = lv_label_create(btn1, NULL);
+    lv_label_set_text(label1, "Desligado");
+
+    lv_obj_t * h_valvula = lv_cont_create(parent, NULL);
+    lv_obj_set_style_local_value_str(h_valvula, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Valvula");
+    lv_cont_set_fit2(h_valvula, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_obj_add_style(h_valvula, LV_CONT_PART_MAIN, &style_box);
+    lv_obj_set_width(h_valvula, grid_w);
+
+    lv_obj_t * btn2 = lv_btn_create(h_valvula, NULL);
+    lv_btn_set_checkable(btn2, true);
+    lv_btn_set_fit2(btn2, LV_FIT_NONE, LV_FIT_NONE);
+    lv_obj_set_size(btn2, 165, 50);
+    lv_obj_set_event_cb(btn2, button_event_handler_attic_2);
+    
+    lv_obj_t * label2 = lv_label_create(btn2, NULL);
+    lv_label_set_text(label2, "Desligado");
+}
+
+void update_info_text1(lv_task_t * task) {
     char info_text1[256];
     snprintf(info_text1, sizeof(info_text1), 
-             "Status do time: %d\n"
-             "Status do led: %d\n"
-             "Status da Distância: %.2f cm\n"
-             "Status do Nível de água: %d\n"
-             "Status do Volume da cisterna: %.2f\n"
-             "Status do Volume da caixa: %.2f\n"
-             "Status do Tempo do Fluxo: %d\n"
-             "Status do Fluxo de água: %d\n",
-             get_time, get_led, get_distance, get_agua, get_cisterna, get_caixa, get_fluxo_time, get_fluxo);
-
-    lv_obj_t * label1 = lv_label_create(h_ambiente, NULL);
+         "Temperatura: %.2f °C\n"
+         "Umidade: %.2f %%\n"
+         "Pressao Barometrica: %.2f hPa\n"
+         "Presenca de Gas: %.1f ppm", 
+         temp, hum, press, mq2_value);
     lv_label_set_text(label1, info_text1);
 }
 
-static void btn_event_handler(lv_obj_t * btn, lv_event_t event)
-{
-    if(event == LV_EVENT_CLICKED) {
-        // Add actions for buttons here
-        printf("Button clicked\n");
+void update_info_text3(lv_task_t * task) {
+    char info_text3[30];
+    snprintf(info_text3, sizeof(info_text3), 
+         "Nivel de agua: %.2f", 
+         water_level);
+    lv_label_set_text(label3, info_text3);
+}
+
+void update_info_text2(lv_task_t * task) {
+    if(topico_door == true || topico_open_door == true)
+    {
+        char info_door[10];
+        if(get_porta == 0)
+        {
+            snprintf(info_door, sizeof(info_door), "Fechado");
+        }
+        else if(get_porta == 1)
+        {
+            snprintf(info_door, sizeof(info_door), "Aberto");
+        }
+
+        char time_str[15];
+        int total_seconds = get_acesso_time / 1000;
+        int hours = total_seconds / 3600;
+        int minutes = (total_seconds % 3600) / 60;
+        int seconds = total_seconds % 60;
+
+        snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", hours, minutes, seconds);
+
+        char info_text21[128];
+        snprintf(info_text21, sizeof(info_text21),  
+             "Estado da porta: %s\n"
+             "Ultimo acesso registrado: %s\n"
+             "Ultimo acesso por: %s",
+             info_door, time_str, get_name);
+        
+        lv_label_set_text(label2, info_text21);
+        topico_door = false;
+        topico_open_door = false;
+    }
+}
+
+void update_info_text4(lv_task_t * task) {
+    if(topico_water == true)
+    {
+        char info_text4[128];
+        snprintf(info_text4, sizeof(info_text4),  
+             "Quantidade de agua na cisterna: %.2f\n"
+             "Quantidade de agua na caixa: %.2f\n"
+             "Vazao da agua: %d",
+             get_cisterna, get_caixa, get_agua);
+        lv_label_set_text(label4, info_text4);
+
+        topico_water = false;
     }
 }
 
 static void button_event_handler_home(lv_obj_t * btn, lv_event_t event)
 {   
-    if (event == LV_EVENT_CLICKED) {
+    if (event == LV_EVENT_PRESSED) {
         const char * current_text = lv_label_get_text(lv_obj_get_child(btn, 0));
 
-        if (strcmp(current_text, "Ativar") == 0) {
-            lv_label_set_text(lv_obj_get_child(btn, 0), "Desativar");  
-            printf("Botão clicado e está ativado\n");
+        if ((strcmp(current_text, "Desligado") == 0)) {
+            lv_label_set_text(lv_obj_get_child(btn, 0), "Ligado");  
+            gpio_set_level(RELAY_PIN, 1);
         } else {
-            lv_label_set_text(lv_obj_get_child(btn, 0), "Ativar");   
-            printf("Botão clicado e está desativado\n");
+            lv_label_set_text(lv_obj_get_child(btn, 0), "Desligado");   
+            gpio_set_level(RELAY_PIN, 0);
+        }
+        is_pump_on = !is_pump_on;
+        char message[60];
+        snprintf(message, sizeof(message), "Water pump is %s\n", is_pump_on ? "on" : "off");
+        mqtt_publish_message("rv/pump", message);
+    }
+}
+
+static void button_event_handler_door(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        mqtt_publish_message("esp32/open_door", "111111111111111111111111111"); 
+    }
+}
+
+static void button_event_handler_pantry_1(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        char json_message[12];
+        int type = 1;
+        snprintf(json_message, sizeof(json_message), "{\"type\": %d}", type);
+        mqtt_publish_message("set_food", json_message);
+        
+    }
+}
+
+static void button_event_handler_pantry_2(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        mqtt_publish_message("set_drink", "1");
+    }
+}
+
+static void button_event_handler_attic_1(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        const char * current_text = lv_label_get_text(lv_obj_get_child(btn, 0));
+
+        if ((strcmp(current_text, "Desligado") == 0)) {
+            lv_label_set_text(lv_obj_get_child(btn, 0), "Ligado"); 
+            mqtt_publish_message("sala11/bomba", "1"); 
+        } else {
+            lv_label_set_text(lv_obj_get_child(btn, 0), "Desligado");
+            mqtt_publish_message("sala11/bomba", "0");   
+        }
+    }
+}
+
+static void button_event_handler_attic_2(lv_obj_t * btn, lv_event_t event)
+{
+    if (event == LV_EVENT_PRESSED) {
+        const char * current_text = lv_label_get_text(lv_obj_get_child(btn, 0));
+
+        if ((strcmp(current_text, "Desligado") == 0)) {
+            lv_label_set_text(lv_obj_get_child(btn, 0), "Ligado"); 
+            mqtt_publish_message("sala11/valvula", "1");
+        } else {
+            lv_label_set_text(lv_obj_get_child(btn, 0), "Desligado");
+            mqtt_publish_message("sala11/valvula", "0");   
         }
     }
 }

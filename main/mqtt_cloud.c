@@ -13,18 +13,20 @@
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 #include "mqtt_client.h"
 #include "esp_tls.h"
 #include "cJSON.h"
 #include "mqtt_cloud.h"
 #include "water_pump.h"
+#include "screen.h"
 
 esp_mqtt_client_handle_t client;
 
-int get_time = 0, get_led = 0, get_agua = 0, get_fluxo_time, get_fluxo, get_acesso_time, get_porta;
-float get_distance = 0.0, get_cisterna = 0.0, get_caixa = 0.0;
-char get_name[30], get_food1[5], get_food2[5], get_food3[5], get_drink[5];
-bool topico_water, topico_fluxo, topico_door, topico_open_door, topico_food, topico_drink;
+int get_agua, get_acesso_time, get_porta;
+float get_cisterna, get_caixa;
+char get_name[30];
+bool topico_water, topico_door, topico_open_door;
 
 extern const uint8_t aws_root_ca_pem_start[] asm("_binary_aws_root_ca_pem_start");
 extern const uint8_t certificate_pem_crt_start[] asm("_binary_certificate_pem_crt_start");
@@ -48,13 +50,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_CONNECTED");
-        xSemaphoreGive(mqtt_on_semaphore);
         msg_id = esp_mqtt_client_subscribe(client, "water/info", 0);
-        msg_id = esp_mqtt_client_subscribe(client, "sala11/fluxo", 0);
         msg_id = esp_mqtt_client_subscribe(client, "esp32/door", 0);
         msg_id = esp_mqtt_client_subscribe(client, "esp32/open_door", 0);
-        msg_id = esp_mqtt_client_subscribe(client, "set_food", 0);
-        msg_id = esp_mqtt_client_subscribe(client, "set_drink", 0);
         msg_id = esp_mqtt_client_subscribe(client, "rv/pump", 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
@@ -76,21 +74,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             cJSON *root = cJSON_Parse(event->data);
             if (root != NULL)
             {
-                cJSON *time_json = cJSON_GetObjectItem(root, "time");
-                if (cJSON_IsNumber(time_json))
-                {
-                    get_time = time_json->valueint;
-                }
-                cJSON *led_json = cJSON_GetObjectItem(root, "led");
-                if (cJSON_IsNumber(led_json))
-                {
-                    get_led = led_json->valueint;
-                }
-                cJSON *distancia_json = cJSON_GetObjectItem(root, "distancia");
-                if (cJSON_IsNumber(distancia_json))
-                {
-                    get_distance = distancia_json->valuedouble;
-                }
                 cJSON *agua_json = cJSON_GetObjectItem(root, "agua");
                 if (cJSON_IsNumber(agua_json))
                 {
@@ -109,25 +92,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 cJSON_Delete(root);
             }
             topico_water = true;
-        }
-        else if (strncmp(event->topic, "sala11/fluxo", event->topic_len) == 0)
-        {
-            cJSON *root = cJSON_Parse(event->data);
-            if (root != NULL)
-            {
-                cJSON *time_json = cJSON_GetObjectItem(root, "time");
-                if (cJSON_IsNumber(time_json))
-                {
-                    get_fluxo_time = time_json->valueint;
-                }
-                cJSON *fluxo_json = cJSON_GetObjectItem(root, "fluxo");
-                if (cJSON_IsNumber(fluxo_json))
-                {
-                    get_fluxo = fluxo_json->valueint;
-                }
-                cJSON_Delete(root);
-            }
-            topico_fluxo = true;
         }
         else if (strncmp(event->topic, "esp32/door", event->topic_len) == 0)
         {
@@ -163,48 +127,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             }
             topico_open_door = true;
         }
-        else if (strncmp(event->topic, "set_food", event->topic_len) == 0)
-        {
-            cJSON *root = cJSON_Parse(event->data);
-            if (root != NULL)
-            {
-                cJSON *food1_json = cJSON_GetObjectItem(root, "X");
-                if (cJSON_IsString(food1_json)  && (food1_json->valuestring != NULL))
-                {
-                    strncpy(get_food1, food1_json->valuestring, sizeof(get_food1) - 1);
-                    get_food1[sizeof(get_food1) - 1] = '\0';
-                }
-                cJSON *food2_json = cJSON_GetObjectItem(root, "Y");
-                if (cJSON_IsString(food2_json)  && (food2_json->valuestring != NULL))
-                {
-                    strncpy(get_food2, food2_json->valuestring, sizeof(get_food2) - 1);
-                    get_food2[sizeof(get_food2) - 1] = '\0';
-                }
-                cJSON *food3_json = cJSON_GetObjectItem(root, "Z");
-                if (cJSON_IsString(food3_json)  && (food3_json->valuestring != NULL))
-                {
-                    strncpy(get_food3, food3_json->valuestring, sizeof(get_food3) - 1);
-                    get_food3[sizeof(get_food3) - 1] = '\0';
-                }
-                cJSON_Delete(root);
-            }
-            topico_food = true;
-        }
-        else if (strncmp(event->topic, "set_drink", event->topic_len) == 0)
-        {
-            cJSON *root = cJSON_Parse(event->data);
-            if (root != NULL)
-            {
-                cJSON *drink_json = cJSON_GetObjectItem(root, "drink");
-                if (cJSON_IsString(drink_json)  && (drink_json->valuestring != NULL))
-                {
-                    strncpy(get_drink, drink_json->valuestring, sizeof(get_drink) - 1);
-                    get_drink[sizeof(get_drink) - 1] = '\0';
-                }
-                cJSON_Delete(root);
-            }
-            topico_drink = true;
-        }
         else if (strncmp(event->topic, "rv/pump", event->topic_len) == 0)
         {
             char *debug_data = malloc(event->data_len + 1);
@@ -214,9 +136,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 strncpy(debug_data, event->data, event->data_len);
                 debug_data[event->data_len] = '\0';
 
-                if (strcmp(debug_data, "pump") == 0)
+                if (strcmp(debug_data, "on_pump") == 0)
                 {
-                    is_button_press = true;
+                    gpio_set_level(RELAY_PIN, 1);
+                }
+                else if (strcmp(debug_data, "off_pump") == 0)
+                {
+                    gpio_set_level(RELAY_PIN, 0);
                 }
                 free(debug_data);
             }

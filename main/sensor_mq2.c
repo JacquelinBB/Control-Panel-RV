@@ -4,6 +4,9 @@
 #include "driver/adc.h"
 #include "sensor_mq2.h"
 
+uint32_t adc_value;
+float voltage, Rs, Ro, ratio, mq2_value;
+
 void setup_adc()
 {
     adc1_config_width(ADC_WIDTH_BIT_12);
@@ -42,10 +45,6 @@ void read_mq2_sensor_task(void *pvParameter)
 {
     setup_adc();
 
-    uint32_t adc_value;
-    float voltage;
-    float Rs, Ro, ratio, mq2_value;
-
     while (1)
     {
         // Leia o valor ADC do sensor MQ-2
@@ -60,7 +59,7 @@ void read_mq2_sensor_task(void *pvParameter)
         // Calcule o valor PPM usando a função de interpolação
         mq2_value = calculate_PPM(Rs);
 
-        printf("ADC Value: %lu, Voltage: %.2fV, PPM: %.2f\n", (unsigned long)adc_value, voltage, mq2_value);
-        vTaskDelay(pdMS_TO_TICKS(10000));
+        //printf("ADC Value: %lu, Voltage: %.2fV, PPM: %.2f\n", (unsigned long)adc_value, voltage, mq2_value);
+        vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
