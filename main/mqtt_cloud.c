@@ -23,11 +23,6 @@
 
 esp_mqtt_client_handle_t client;
 
-int get_agua, get_acesso_time, get_porta;
-float get_cisterna, get_caixa;
-char get_name[30];
-bool topico_water, topico_door, topico_open_door;
-
 extern const uint8_t aws_root_ca_pem_start[] asm("_binary_aws_root_ca_pem_start");
 extern const uint8_t certificate_pem_crt_start[] asm("_binary_certificate_pem_crt_start");
 extern const uint8_t private_pem_key_start[] asm("_binary_private_pem_key_start");
@@ -69,65 +64,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG_M, "MQTT_EVENT_DATA");
-        if (strncmp(event->topic, "water/info", event->topic_len) == 0)
-        {
-            cJSON *root = cJSON_Parse(event->data);
-            if (root != NULL)
-            {
-                cJSON *agua_json = cJSON_GetObjectItem(root, "agua");
-                if (cJSON_IsNumber(agua_json))
-                {
-                    get_agua = agua_json->valueint;
-                }
-                cJSON *cisterna_json = cJSON_GetObjectItem(root, "cisterna");
-                if (cJSON_IsNumber(cisterna_json))
-                {
-                    get_cisterna = cisterna_json->valuedouble;
-                }
-                cJSON *caixa_json = cJSON_GetObjectItem(root, "caixa");
-                if (cJSON_IsNumber(caixa_json))
-                {
-                    get_caixa = caixa_json->valuedouble;
-                }
-                cJSON_Delete(root);
-            }
-            topico_water = true;
-        }
-        else if (strncmp(event->topic, "esp32/door", event->topic_len) == 0)
-        {
-            cJSON *root = cJSON_Parse(event->data);
-            if (root != NULL)
-            {
-                cJSON *time_json = cJSON_GetObjectItem(root, "time");
-                if (cJSON_IsNumber(time_json))
-                {
-                    get_acesso_time = time_json->valueint;
-                }
-                cJSON *porta_json = cJSON_GetObjectItem(root, "sensor_porta");
-                if (cJSON_IsNumber(porta_json))
-                {
-                    get_porta = porta_json->valueint;
-                }
-                cJSON_Delete(root);
-            }
-            topico_door = true;
-        }
-        else if (strncmp(event->topic, "esp32/open_door", event->topic_len) == 0)
-        {
-            cJSON *root = cJSON_Parse(event->data);
-            if (root != NULL)
-            {
-                cJSON *name_json = cJSON_GetObjectItem(root, "name");
-                if (cJSON_IsString(name_json)  && (name_json->valuestring != NULL))
-                {
-                    strncpy(get_name, name_json->valuestring, sizeof(get_name) - 1);
-                    get_name[sizeof(get_name) - 1] = '\0'; 
-                }
-                cJSON_Delete(root);
-            }
-            topico_open_door = true;
-        }
-        else if (strncmp(event->topic, "rv/pump", event->topic_len) == 0)
+        if (strncmp(event->topic, "rv/pump", event->topic_len) == 0)
         {
             char *debug_data = malloc(event->data_len + 1);
 
@@ -136,11 +73,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
                 strncpy(debug_data, event->data, event->data_len);
                 debug_data[event->data_len] = '\0';
 
-                if (strcmp(debug_data, "on_pump") == 0)
+                if (strcmp(debug_data, "1") == 0)
                 {
                     gpio_set_level(RELAY_PIN, 1);
                 }
-                else if (strcmp(debug_data, "off_pump") == 0)
+                else if (strcmp(debug_data, "0") == 0)
                 {
                     gpio_set_level(RELAY_PIN, 0);
                 }

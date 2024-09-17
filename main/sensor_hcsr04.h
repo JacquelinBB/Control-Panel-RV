@@ -1,7 +1,7 @@
 #ifndef HC_SR04
 #define HC_SR04
 
-#define TRIGGER_GPIO GPIO_NUM_14
+#define TRIGGER_GPIO GPIO_NUM_33
 #define ECHO_GPIO GPIO_NUM_26
 #define TANK_HEIGHT_CM 14 // Altura do tanque em centímetro é de 14 ou 17
 

@@ -12,16 +12,16 @@ float water_level = 0.0;
 void init_config_water_tank()
 {
     gpio_config_t config;
-    config.intr_type = GPIO_INTR_DISABLE;      // Desabilita interrupções geradas pelo pino
-    config.mode = GPIO_MODE_OUTPUT;            // Define o pino como saída, para enviar o pulso de trigger
-    config.pin_bit_mask = GPIO_OUTPUT_PIN_SEL; // Define o pino que será configurado
-    config.pull_down_en = 0;                   // Desabilita resistor de pull-down do pino
-    config.pull_up_en = 0;                     // Desabilita resistor de pull-up do pino
-    gpio_config(&config);                      // Aplica a configuração ao pino
+    config.intr_type = GPIO_INTR_DISABLE;
+    config.mode = GPIO_MODE_OUTPUT;
+    config.pin_bit_mask = GPIO_OUTPUT_PIN_SEL;
+    config.pull_down_en = 0;
+    config.pull_up_en = 0;
+    gpio_config(&config);
 
-    config.mode = GPIO_MODE_INPUT;            // Define o pino como entrada, para receber o pulso do ECHO
-    config.pin_bit_mask = GPIO_INPUT_PIN_SEL; // Define o pino que será configurado
-    gpio_config(&config);                     // Aplica a configuração ao pino
+    config.mode = GPIO_MODE_INPUT;
+    config.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    gpio_config(&config);
 }
 
 float calcular_nivel_agua(float distancia)
@@ -70,9 +70,9 @@ void water_tank_task(void *params)
 
         // Calcular a porcentagem de água
         water_level = calcular_nivel_agua(distance);
-        vTaskDelay(pdMS_TO_TICKS(10));
+        //vTaskDelay(pdMS_TO_TICKS(100));
         //printf("Water level: %.2f%%\n", water_level);
 
-        vTaskDelay(pdMS_TO_TICKS(5000)); // Aguardar 1 segundo
+        vTaskDelay(pdMS_TO_TICKS(2000)); // Aguardar 1 segundo
     }
 }
