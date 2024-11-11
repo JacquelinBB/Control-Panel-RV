@@ -8,6 +8,7 @@
 //extern char get_pump_status[10];
 
 void mqtt_start();
+void mqtt_stop();
 void mqtt_publish_message(char* topic, char *message);
 
 #endif

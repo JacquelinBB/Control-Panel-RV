@@ -228,9 +228,6 @@ static void button_event_handler_home(lv_obj_t * btn, lv_event_t event)
         }
         is_pump_on = !is_pump_on;
         is_extern_activate = false;
-        char message[60];
-        snprintf(message, sizeof(message), "Water pump is %s\n", is_pump_on ? "on" : "off");
-        mqtt_publish_message("rv/pump", message);
     }
 }
 

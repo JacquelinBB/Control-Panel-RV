@@ -16,5 +16,6 @@ void ble_app_on_sync(void);
 void ble_app_advertise(void);
 void ble_security_init(void);
 void ble_host_task(void *param);
+void info_mqtt();
 
 #endif

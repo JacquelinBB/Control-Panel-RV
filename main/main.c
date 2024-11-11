@@ -19,17 +19,6 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
-void info_remote()
-{
-    char json_message[128];
-    snprintf(json_message, sizeof(json_message), "{\"water_level\": %.2f, \"pump_status\": \"%s\"}", water_level, is_pump_on ? "on" : "off");
-    mqtt_publish_message("rv/info", json_message);
-    vTaskDelay(pdMS_TO_TICKS(5000));
-    // sensor gas, pressao, temperatura, umidade, level da agua, bomba de agua
-    // pub info de tempo em tempo
-    // funções diferentes
-}
-
 void app_main()
 {
     ESP_LOGI("Info", "[APP] Startup..");
@@ -51,24 +40,15 @@ void app_main()
 
     ESP_LOGI(TAG, "Inicializando NimBLE...");
     ble_security_init();
-    nimble_port_init();                        // 3 - Initialize the host stack
-    ble_svc_gap_device_name_set("BLE-Server"); // 4 - Initialize NimBLE configuration - server name
-    ble_svc_gap_init();                        // 4 - Initialize NimBLE configuration - gap service
-    ble_svc_gatt_init();                       // 4 - Initialize NimBLE configuration - gatt service
-    ble_gatts_count_cfg(gatt_svr_svcs);            // 4 - Initialize NimBLE configuration - config gatt services
+    nimble_port_init();         
+    ble_svc_gap_device_name_set("BLE-Server");
+    ble_svc_gap_init();               
+    ble_svc_gatt_init();             
+    ble_gatts_count_cfg(gatt_svr_svcs);      
     ble_gatts_add_svcs(gatt_svr_svcs);  
-    ble_hs_cfg.sync_cb = ble_app_on_sync;      // 5 - Initialize application
-    nimble_port_freertos_init(ble_host_task);            // 4 - Initialize NimBLE configuration - queues gatt services.
-   
-    //ble_hs_cfg.sync_cb = ble_gap_adv_sta;
-    //gatt_svr_init();
-    //nimble_port_freertos_init(ble_host_task);
+    ble_hs_cfg.sync_cb = ble_app_on_sync;  
+    nimble_port_freertos_init(ble_host_task);        
     vTaskDelay(pdMS_TO_TICKS(100));
-
-    //ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
-    //wifi_init_sta();
-    //mqtt_start();
-    //vTaskDelay(pdMS_TO_TICKS(100));
 
     //xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 

@@ -93,3 +93,16 @@ void wifi_init_sta(void)
         ESP_LOGE(TAG_W, "UNEXPECTED EVENT");
     }
 }
+
+void wifi_stop() {
+    ESP_LOGI(TAG_W, "Parando o WiFi...");
+    
+    ESP_ERROR_CHECK(esp_wifi_stop());
+
+    if (s_wifi_event_group) {
+        vEventGroupDelete(s_wifi_event_group);
+        s_wifi_event_group = NULL;
+    }
+
+    ESP_LOGI(TAG_W, "WiFi parado com sucesso.");
+}

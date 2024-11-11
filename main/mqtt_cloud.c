@@ -124,6 +124,18 @@ void mqtt_start()
     esp_mqtt_client_start(client);
 }
 
+void mqtt_stop() {
+    ESP_LOGI(TAG_M, "Parando o MQTT...");
+
+    if (client) {
+        esp_mqtt_client_stop(client); 
+        esp_mqtt_client_destroy(client);
+        client = NULL; 
+    }
+
+    ESP_LOGI(TAG_M, "MQTT parado com sucesso.");
+}
+
 void mqtt_publish_message(char *topic, char *message)
 {
     int message_id = esp_mqtt_client_publish(client, topic, message, 0, 1, 0);
