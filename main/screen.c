@@ -221,10 +221,10 @@ static void button_event_handler_home(lv_obj_t * btn, lv_event_t event)
     if (event == LV_EVENT_PRESSED) {
         if ((strcmp(current_text, "Desligado") == 0)) {
             lv_label_set_text(lv_obj_get_child(btn, 0), "Ligado");  
-            gpio_set_level(RELAY_PIN, 1);
+            start_pump();
         } else {
             lv_label_set_text(lv_obj_get_child(btn, 0), "Desligado");   
-            gpio_set_level(RELAY_PIN, 0);
+            stop_pump();
         }
         is_pump_on = !is_pump_on;
         is_extern_activate = false;

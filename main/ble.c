@@ -60,12 +60,12 @@ int actuator_write_cb(uint16_t conn_handle, uint16_t attr_handle, struct ble_gat
     ESP_LOGI(TAG_B, "Valor recebido: %d", buf[0]);
     if (pump == 1 && !is_pump_on)
     {
-        gpio_set_level(RELAY_PIN, 1);
+        start_pump();
         is_extern_activate = true;
     }
     else if (pump == 0 && is_pump_on)
     {
-        gpio_set_level(RELAY_PIN, 0);
+        stop_pump();
         is_extern_activate = true;
     }
     return 0;

@@ -72,11 +72,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
                 if (strcmp(debug_data, "1") == 0)
                 {
-                    gpio_set_level(RELAY_PIN, 1);
+                    start_pump();
                 }
                 else if (strcmp(debug_data, "0") == 0)
                 {
-                    gpio_set_level(RELAY_PIN, 0);
+                    stop_pump();
                 }
                 free(debug_data);
             }

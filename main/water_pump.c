@@ -4,6 +4,10 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "water_pump.h"
+#include <time.h>
+
+time_t pump_start_time;
+float total_energy_consumed = 0.0;
 
 void init_config_water_pump() {
     gpio_config_t config; // Estrutura de configuração do pino GPIO
@@ -17,4 +21,20 @@ void init_config_water_pump() {
     gpio_config(&config); // Aplica a configuração ao pino
 
     gpio_set_level(RELAY_PIN, 0); // Desliga o relé inicialmente
+}
+
+void start_pump() {
+    gpio_set_level(RELAY_PIN, 1);
+    pump_start_time = time(NULL); // Registra o horário de início
+}
+
+void stop_pump() {
+    gpio_set_level(RELAY_PIN, 0);
+
+    // Calcula o tempo de operação da bomba em segundos
+    time_t pump_end_time = time(NULL);
+    double elapsed_time= (double)(pump_end_time - pump_start_time); 
+    total_energy_consumed += (PUMP_POWER_WATTS * elapsed_time) / 3600.0; // Calcula o consumo de energia em Wh
+
+    ESP_LOGI("Bomba", "Consumo total acumulado: %.2f Wh", total_energy_consumed);
 }
