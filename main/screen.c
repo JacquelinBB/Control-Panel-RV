@@ -16,6 +16,7 @@
 #include "sensor_bme280.h"
 #include "water_pump.h"
 #include "sensor_mq2.h"
+#include "ble.h"
 
 /* Littlevgl specific */
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE
@@ -31,6 +32,7 @@ bool is_pump_on = false;
 static void button_event_handler_home(lv_obj_t * btn, lv_event_t event);
 void update_info_text1(lv_task_t * task);
 void update_info_text3(lv_task_t * task);
+void update_button_text1(lv_task_t * task);
 static void home_create(lv_obj_t * parent);
 #if LV_USE_THEME_MATERIAL
 static void color_chg_event_cb(lv_obj_t * sw, lv_event_t e);
@@ -137,7 +139,6 @@ void lv_tick_task(void *arg) {
     lv_tick_inc(LV_TICK_PERIOD_MS);
 }
 
-
 static void home_create(lv_obj_t * parent)
 {
     lv_page_set_scrl_layout(parent, LV_LAYOUT_PRETTY_TOP);
@@ -171,6 +172,8 @@ static void home_create(lv_obj_t * parent)
     lv_obj_t * label = lv_label_create(btn, NULL);
     lv_label_set_text(label, "Desligado");
 
+    lv_task_create(update_button_text1, 2000, LV_TASK_PRIO_LOW, label);
+
     lv_obj_t * h_agua = lv_cont_create(parent, NULL);
     lv_obj_set_style_local_value_str(h_agua, LV_CONT_PART_MAIN, LV_STATE_DEFAULT, "Tanque de agua");
     lv_cont_set_fit2(h_agua, LV_FIT_TIGHT, LV_FIT_TIGHT);
@@ -180,7 +183,7 @@ static void home_create(lv_obj_t * parent)
     label3 = lv_label_create(h_agua, NULL);
     lv_label_set_text(label3, "Esperando algum dado para ser exibido...");
 
-    lv_task_create(update_info_text3, 2000, LV_TASK_PRIO_LOW, NULL);
+    lv_task_create(update_info_text3, 4000, LV_TASK_PRIO_LOW, NULL);
 }
 
 void update_info_text1(lv_task_t * task) {
@@ -202,11 +205,20 @@ void update_info_text3(lv_task_t * task) {
     lv_label_set_text(label3, info_text3);
 }
 
+void update_button_text1(lv_task_t * task){
+    lv_obj_t * label = (lv_obj_t *)task->user_data;
+    if (is_extern_activate) {
+        is_pump_on = !is_pump_on;
+        lv_label_set_text(label, is_pump_on ? "Ligado" : "Desligado");
+        is_extern_activate = false;
+    }
+}
+
 static void button_event_handler_home(lv_obj_t * btn, lv_event_t event)
 {   
-    if (event == LV_EVENT_PRESSED) {
-        const char * current_text = lv_label_get_text(lv_obj_get_child(btn, 0));
+    const char * current_text = lv_label_get_text(lv_obj_get_child(btn, 0));
 
+    if (event == LV_EVENT_PRESSED) {
         if ((strcmp(current_text, "Desligado") == 0)) {
             lv_label_set_text(lv_obj_get_child(btn, 0), "Ligado");  
             gpio_set_level(RELAY_PIN, 1);
@@ -215,6 +227,7 @@ static void button_event_handler_home(lv_obj_t * btn, lv_event_t event)
             gpio_set_level(RELAY_PIN, 0);
         }
         is_pump_on = !is_pump_on;
+        is_extern_activate = false;
         char message[60];
         snprintf(message, sizeof(message), "Water pump is %s\n", is_pump_on ? "on" : "off");
         mqtt_publish_message("rv/pump", message);

@@ -45,9 +45,6 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG_M, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_subscribe(client, "water/info", 0);
-        msg_id = esp_mqtt_client_subscribe(client, "esp32/door", 0);
-        msg_id = esp_mqtt_client_subscribe(client, "esp32/open_door", 0);
         msg_id = esp_mqtt_client_subscribe(client, "rv/pump", 0);
         break;
     case MQTT_EVENT_DISCONNECTED:

@@ -12,6 +12,12 @@
 #include "sensor_bme280.h"
 #include "sensor_mq2.h"
 #include "screen.h"
+#include "ble.h"
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "host/ble_hs.h"
+#include "services/gap/ble_svc_gap.h"
+#include "services/gatt/ble_svc_gatt.h"
 
 void info_remote()
 {
@@ -42,6 +48,22 @@ void app_main()
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    ESP_LOGI(TAG, "Inicializando NimBLE...");
+    ble_security_init();
+    nimble_port_init();                        // 3 - Initialize the host stack
+    ble_svc_gap_device_name_set("BLE-Server"); // 4 - Initialize NimBLE configuration - server name
+    ble_svc_gap_init();                        // 4 - Initialize NimBLE configuration - gap service
+    ble_svc_gatt_init();                       // 4 - Initialize NimBLE configuration - gatt service
+    ble_gatts_count_cfg(gatt_svr_svcs);            // 4 - Initialize NimBLE configuration - config gatt services
+    ble_gatts_add_svcs(gatt_svr_svcs);  
+    ble_hs_cfg.sync_cb = ble_app_on_sync;      // 5 - Initialize application
+    nimble_port_freertos_init(ble_host_task);            // 4 - Initialize NimBLE configuration - queues gatt services.
+   
+    //ble_hs_cfg.sync_cb = ble_gap_adv_sta;
+    //gatt_svr_init();
+    //nimble_port_freertos_init(ble_host_task);
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     //ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
     //wifi_init_sta();
