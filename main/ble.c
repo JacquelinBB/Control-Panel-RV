@@ -112,18 +112,18 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
         if (event->connect.status == 0) {
-            //wifi_stop(); 
-            //mqtt_stop();
+            wifi_stop(); 
+            mqtt_stop();
             ble_app_advertise();
             ESP_LOGI(TAG_B, "Conexão BLE estabelecida.");
         } else { // Se houve falha na conexão, reinicia a propaganda BLE
             ESP_LOGE(TAG_B, "Falha na conexão, tentando novamente...");
             ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
-            //ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
-            //wifi_init_sta();
-            //mqtt_start();
-            //info_mqtt();
-            //vTaskDelay(pdMS_TO_TICKS(100));
+            ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
+            wifi_init_sta();
+            mqtt_start();
+            info_mqtt();
+            vTaskDelay(pdMS_TO_TICKS(100));
         }
         break;
     case BLE_GAP_EVENT_DISCONNECT:
