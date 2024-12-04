@@ -131,6 +131,8 @@ void mqtt_stop() {
         esp_mqtt_client_stop(client); 
         esp_mqtt_client_destroy(client);
         client = NULL; 
+    } else {
+        ESP_LOGW(TAG_M, "Cliente MQTT já estava nulo. Nenhuma ação necessária.");
     }
 
     ESP_LOGI(TAG_M, "MQTT parado com sucesso.");

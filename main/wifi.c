@@ -96,8 +96,15 @@ void wifi_init_sta(void)
 
 void wifi_stop() {
     ESP_LOGI(TAG_W, "Parando o WiFi...");
-    
-    ESP_ERROR_CHECK(esp_wifi_stop());
+
+    wifi_mode_t mode;
+    esp_err_t err = esp_wifi_get_mode(&mode);
+
+    if (err == ESP_OK && mode != WIFI_MODE_NULL) {
+        ESP_ERROR_CHECK(esp_wifi_stop());
+    } else {
+        ESP_LOGW(TAG_W, "Wi-Fi não inicializado ou já parado.");
+    }
 
     if (s_wifi_event_group) {
         vEventGroupDelete(s_wifi_event_group);

@@ -17,7 +17,6 @@
 #include <time.h>
 #include "wifi.h"
 #include "mqtt_cloud.h"
-
 #include "esp_nimble_hci.h"
 
 uint8_t ble_addr_type;
@@ -129,11 +128,11 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI(TAG_B, "Conexão BLE perdida, iniciando novamente...");
         ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER, &adv_params, ble_gap_event, NULL);
-        //ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
-        //wifi_init_sta();
-        //mqtt_start();
-        //info_mqtt();
-        //vTaskDelay(pdMS_TO_TICKS(100));
+        ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
+        wifi_init_sta();
+        mqtt_start();
+        info_mqtt();
+        vTaskDelay(pdMS_TO_TICKS(100));
         break;
     case BLE_GAP_EVENT_ADV_COMPLETE:
         ESP_LOGI("GAP", "BLE GAP EVENT");
