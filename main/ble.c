@@ -121,8 +121,10 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
             ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
             wifi_init_sta();
             mqtt_start();
-            info_mqtt();
-            vTaskDelay(pdMS_TO_TICKS(100));
+            while (1) {
+                info_mqtt();
+                vTaskDelay(pdMS_TO_TICKS(7000));
+            }
         }
         break;
     case BLE_GAP_EVENT_DISCONNECT:
@@ -131,8 +133,10 @@ static int ble_gap_event(struct ble_gap_event *event, void *arg) {
         ESP_LOGI(TAG_W, "ESP_WIFI_MODE_STA");
         wifi_init_sta();
         mqtt_start();
-        info_mqtt();
-        vTaskDelay(pdMS_TO_TICKS(100));
+        while (1) {
+            info_mqtt();
+            vTaskDelay(pdMS_TO_TICKS(7000));
+        }
         break;
     case BLE_GAP_EVENT_ADV_COMPLETE:
         ESP_LOGI("GAP", "BLE GAP EVENT");
@@ -199,5 +203,4 @@ void info_mqtt(){
     "{\"temperature\": %.2f, \"humidade\": %.2f, \"pressure\": %.2f, \"gas\": %.1f, \"water_level\": %.2f, \"pump_status\": \"%s\"}", 
     temp, hum, press, mq2_value, water_level, is_pump_on ? "on" : "off");
     mqtt_publish_message("rv/info", json_message);
-    vTaskDelay(pdMS_TO_TICKS(7000));
 }
