@@ -52,16 +52,16 @@ void app_main()
 
     //xTaskCreate(led_task, "Led", 4096, NULL, 1, NULL);
 
-    //ESP_LOGI(TAG_WA, "Initializing Water Tank");
-    //xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 5, NULL);
-    //ESP_LOGI(TAG_WP, "Initializing Water Pump");
-    //init_config_water_pump();
-    //ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
-    //i2c_master_init();
-    //ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
-    //xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
-    //ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
-    //xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
+    ESP_LOGI(TAG_WA, "Initializing Water Tank");
+    xTaskCreate(water_tank_task, "Water Tank Task", 4096, NULL, 5, NULL);
+    ESP_LOGI(TAG_WP, "Initializing Water Pump");
+    init_config_water_pump();
+    ESP_LOGI(TAG_BME280, "Initializing I2C Bus for BME280 Sensor");
+    i2c_master_init();
+    ESP_LOGI(TAG_BME280, "Initializing BME280 Sensor");
+    xTaskCreate(bme280_task, "BME280 Task", 1024 * 5, NULL, 5, NULL);
+    ESP_LOGI(TAG_BME280, "Initializing MQ2 Sensor");
+    xTaskCreate(read_mq2_sensor_task, "MQ2 Sensor Task", 4096, NULL, 5, NULL);
 
-    //xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1);
 }

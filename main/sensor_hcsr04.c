@@ -73,6 +73,6 @@ void water_tank_task(void *params)
         //vTaskDelay(pdMS_TO_TICKS(100));
         //printf("Water level: %.2f%%\n", water_level);
 
-        vTaskDelay(pdMS_TO_TICKS(2000)); // Aguardar 1 segundo
+        vTaskDelay(pdMS_TO_TICKS(2000)); // Aguardar 2 segundo
     }
 }
