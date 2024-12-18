@@ -48,3 +48,14 @@ Categorização
 ├── LICENSE
 └── README.md  This is the file you are currently reading
 ```
+
+## Licença
+Este projeto está licenciado sob a [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/). 
+
+Você pode:
+- Compartilhar e modificar este trabalho para fins **não comerciais**, desde que atribua os devidos créditos aos autores.
+
+É estritamente proibido:
+- Usar este trabalho para fins comerciais sem a autorização prévia dos autores.
+
+Para mais detalhes, consulte o arquivo [LICENSE](LICENSE).
